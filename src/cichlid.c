@@ -37,7 +37,7 @@ GtkTreeModel *files_filter;
 GtkTreeModel *files_sort;
 static guint filter_flags = (1 << GOOD) | (1 << BAD) | (1 << NOT_VERIFIED) | (1 << NOT_FOUND);
 
-gint hash_type = HASH_UNKNOWN;
+int hash_type = HASH_UNKNOWN;
 
 static void clear_filelist();
 void on_verify_clicked(GtkWidget *widget, gpointer user_data);
@@ -132,13 +132,13 @@ on_filter_changed(GtkWidget *cb_filter, gpointer user_data)
  * @param a pointer to a precalculated checksum from the SFV/MD5/SHA1 file.
  */
 void
-add_file_to_list(const gchar *filename, const gchar* base_path, gconstpointer precalculated_checksum)
+add_file_to_list(const char *filename, const char* base_path, gconstpointer precalculated_checksum)
 {
 	GFile *file;
 	GFileInfo *info;
-	const gchar *name = NULL;
-	gchar *file_path;
-	gint status;
+	const char *name = NULL;
+	char *file_path;
+	int status;
 
 	file_path = g_strconcat(base_path,G_DIR_SEPARATOR_S,filename,NULL);
 
@@ -194,8 +194,8 @@ clear_filelist()
 void
 render_status_text(GtkTreeViewColumn *column, GtkCellRenderer *renderer, GtkTreeModel *model, GtkTreeIter *iter, gpointer user_data)
 {
-	gint status;
-	gchar *status_text;
+	int status;
+	char *status_text;
 	gtk_tree_model_get(model, iter, STATUS, &status, -1);
 
 	switch (status)
@@ -231,7 +231,7 @@ filelist_filter_func(GtkTreeModel *model, GtkTreeIter *iter, gpointer user_data)
 		visible = TRUE;
 	else
 	{
-		gint status;
+		int status;
 		gtk_tree_model_get(model, iter, STATUS, &status, -1);
 
 		if ((1 << status) & filter_flags)
@@ -246,11 +246,11 @@ filelist_filter_func(GtkTreeModel *model, GtkTreeIter *iter, gpointer user_data)
 /**
  * Sort function for sorting the file list by name
  */
-gint
+int
 filelist_name_sort_func (GtkTreeModel *model, GtkTreeIter *a, GtkTreeIter *b, gpointer user_data)
 {
-	gchar *filename_a, *filename_b, *filename_cmp_a, *filename_cmp_b;
-	gint result;
+	char *filename_a, *filename_b, *filename_cmp_a, *filename_cmp_b;
+	int result;
 
 	/* Read filenames */
 	gtk_tree_model_get (model, a,
@@ -278,10 +278,10 @@ filelist_name_sort_func (GtkTreeModel *model, GtkTreeIter *a, GtkTreeIter *b, gp
 /**
  * Sort function for sorting the file list by status
  */
-gint
+int
 filelist_status_sort_func(GtkTreeModel *model, GtkTreeIter *a, GtkTreeIter *b, gpointer user_data)
 {
-	gint status_a, status_b;
+	int status_a, status_b;
 
 	/* Read status codes */
 	gtk_tree_model_get (model, a,

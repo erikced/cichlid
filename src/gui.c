@@ -140,7 +140,7 @@ static GtkLabel 		*progress_dialog_file_label = NULL;
 static GtkButton		*progress_dialog_abort;
 
 void
-ck_progress_dialog_new(volatile gint *abort)
+ck_progress_dialog_new(volatile int *abort)
 {
 	GtkBuilder *WindowBuilder;
 
@@ -194,16 +194,16 @@ ck_progress_dialog_delete()
 
 void
 ck_progress_dialog_update(GMutex *lock,
-						  const gchar *current_file,
+						  const char *current_file,
 						  const guint *current_file_num,
 						  const guint *total_file_num,
-						  const gint *verified_file_size,
-						  const gint *total_file_size)
+						  const int *verified_file_size,
+						  const int *total_file_size)
 {
 	if (!GTK_IS_WIDGET(progress_dialog))
 		return;
 
-	gchar *verification_message, *progressbar_message;
+	char *verification_message, *progressbar_message;
 	double verification_progress;
 
 	/* Prepare the messages */

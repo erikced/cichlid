@@ -37,7 +37,7 @@ struct _CichlidHashCrc32
   GObject parent_instance;
 
   gboolean hash_computed;
-  guint32 hash;
+  uint32_t hash;
 };
 
 struct _CichlidHashCrc32Class

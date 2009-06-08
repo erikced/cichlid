@@ -16,11 +16,12 @@
  * You should have received a copy of the GNU General Public License
  * along with cichlid.  If not, see <http://www.gnu.org/licenses/>.
  */
-
-#include <glib.h>
 #include <gio/gio.h>
+#include <glib.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+
 #include "cichlid_hash.h"
 #include "cichlid_hash_md5.h"
 
@@ -28,21 +29,21 @@
 
 enum
 {
-  READING = 0,
-  BIT_APPENDED,
-  SIZE_APPENDED
+	READING = 0,
+	BIT_APPENDED,
+	SIZE_APPENDED
 };
 
-static void cichlid_hash_md5_calc (CichlidHashMd5 *self, const gchar *buf, gsize bytes_read);
-static gboolean cichlid_hash_md5_equals (guint32* a, guint32* b);
-static inline void cichlid_hash_md5_flip_endianness (guint32 *destination, guint32 *source);
-static guint32 *cichlid_hash_md5_get_hash (CichlidHash *object);
-static gchar *cichlid_hash_md5_get_hash_string (CichlidHash *object);
-static inline guint32 cichlid_hash_md5_rotate_left (guint32 x, guint32 y);
-static void cichlid_hash_md5_update (CichlidHash *object, const gchar *data, gsize data_size);
-static void cichlid_hash_interface_init (CichlidHashInterface *iface);
+static void            cichlid_hash_md5_calc (CichlidHashMd5 *self, const char *buf, size_t bytes_read);
+static gboolean        cichlid_hash_md5_equals (uint32_t* a, uint32_t* b);
+static inline void     cichlid_hash_md5_flip_endianness (uint32_t *destination, uint32_t *source);
+static uint32_t       *cichlid_hash_md5_get_hash (CichlidHash *object);
+static char           *cichlid_hash_md5_get_hash_string (CichlidHash *object);
+static inline uint32_t cichlid_hash_md5_rotate_left (uint32_t x, uint32_t y);
+static void            cichlid_hash_md5_update (CichlidHash *object, const char *data, size_t data_size);
+static void            cichlid_hash_interface_init (CichlidHashInterface *iface);
 
-static const guint32 shift_lookup_table[64] = {
+static const uint32_t shift_lookup_table[64] = {
 		0x07, 0x0C, 0x11, 0x16,
 		0x07, 0x0C, 0x11, 0x16,
 		0x07, 0x0C, 0x11, 0x16,
@@ -61,7 +62,7 @@ static const guint32 shift_lookup_table[64] = {
 		0x06, 0x0A, 0x0F, 0x15
 };
 
-static const guint32 shift_angle_table[64] = {
+static const uint32_t shift_angle_table[64] = {
 		0xd76aa478, 0xe8c7b756, 0x242070db, 0xc1bdceee,
 		0xf57c0faf, 0x4787c62a, 0xa8304613, 0xfd469501,
 		0x698098d8, 0x8b44f7af, 0xffff5bb1, 0x895cd7be,
@@ -87,7 +88,7 @@ G_DEFINE_TYPE_WITH_CODE (CichlidHashMd5, cichlid_hash_md5, G_TYPE_OBJECT,
  * Initialize the interface
  */
 static void
-cichlid_hash_interface_init (CichlidHashInterface *iface)
+cichlid_hash_interface_init(CichlidHashInterface *iface)
 {
 	iface->equals = cichlid_hash_md5_equals;
 	iface->get_hash = cichlid_hash_md5_get_hash;
@@ -97,7 +98,7 @@ cichlid_hash_interface_init (CichlidHashInterface *iface)
 }
 
 static void
-cichlid_hash_md5_dispose (GObject *gobject)
+cichlid_hash_md5_dispose(GObject *gobject)
 {
 	CichlidHashMd5 *self = CICHLID_HASH_MD5 (gobject);
 
@@ -106,7 +107,7 @@ cichlid_hash_md5_dispose (GObject *gobject)
 }
 
 static void
-cichlid_hash_md5_finalize (GObject *gobject)
+cichlid_hash_md5_finalize(GObject *gobject)
 {
 	CichlidHashMd5 *self = CICHLID_HASH_MD5 (gobject);
 
@@ -115,7 +116,7 @@ cichlid_hash_md5_finalize (GObject *gobject)
 
 
 static void
-cichlid_hash_md5_class_init (CichlidHashMd5Class *klass)
+cichlid_hash_md5_class_init(CichlidHashMd5Class *klass)
 {
 	GObjectClass *gobject_class = G_OBJECT_CLASS (klass);
 	gobject_class->dispose = cichlid_hash_md5_dispose;
@@ -126,7 +127,7 @@ cichlid_hash_md5_class_init (CichlidHashMd5Class *klass)
 
 
 static void
-cichlid_hash_md5_init (CichlidHashMd5 *self)
+cichlid_hash_md5_init(CichlidHashMd5 *self)
 {
 	/* Partial result variables */
 	self->p[0] = 0x67452301;
@@ -139,7 +140,7 @@ cichlid_hash_md5_init (CichlidHashMd5 *self)
 	self->data_left_size = 0;
 }
 
-CichlidHash*
+CichlidHash *
 cichlid_hash_md5_new()
 {
 	CichlidHashMd5 *_ccalc;
@@ -149,16 +150,16 @@ cichlid_hash_md5_new()
 }
 
 static gboolean
-cichlid_hash_md5_equals (guint32* a, guint32* b)
+cichlid_hash_md5_equals(uint32_t* a, uint32_t* b)
 {
 	return a[0] == b[0] && a[1] == b[1] && a[2] == b[2] && a[3] == b[3];
 }
 
 static void
-cichlid_hash_md5_update (CichlidHash *object, const gchar *data, gsize data_size)
+cichlid_hash_md5_update(CichlidHash *object, const char *data, size_t data_size)
 {
 	CichlidHashMd5 *self;
-	gchar *buf = NULL;
+	char *buf = NULL;
 	guint new_data_left_size;
 
 	self = CICHLID_HASH_MD5(object);
@@ -169,22 +170,19 @@ cichlid_hash_md5_update (CichlidHash *object, const gchar *data, gsize data_size
 	self->total_size += data_size;
 
 	/* If there is no data left since the previous update */
-	if (!self->data_left_size)
-	{
+	if (!self->data_left_size) {
 		self->data_left_size = data_size % 64;
 		memcpy(self->data_left, data + data_size - self->data_left_size, self->data_left_size);
 
 		cichlid_hash_md5_calc(self, data, data_size - self->data_left_size);
 	}
 	/* If there is data left since the previous update but the total data size < 64 bytes */
-	else if (data_size + self->data_left_size < 64)
-	{
+	else if (data_size + self->data_left_size < 64)	{
 		memcpy(self->data_left + self->data_left_size, data, data_size);
 		self->data_left_size += data_size;
 	}
 	/* If there is data left since the previous update*/
-	else
-	{
+	else {
 		new_data_left_size = (data_size + self->data_left_size) % 64;
 		buf = g_malloc(sizeof(guchar)*(data_size + self->data_left_size - new_data_left_size));
 		memcpy(buf, self->data_left, self->data_left_size);
@@ -201,15 +199,15 @@ cichlid_hash_md5_update (CichlidHash *object, const gchar *data, gsize data_size
 /*
  * Returns the resulting hash as an array of integers
  * @param object
- * @return an array of for guint32* if successful, else NULL.
+ * @return an array of for uint32_t* if successful, else NULL.
  */
-static guint32 *
-cichlid_hash_md5_get_hash (CichlidHash *object)
+static uint32_t *
+cichlid_hash_md5_get_hash(CichlidHash *object)
 {
 	CichlidHashMd5	*self;
-	gchar 			*buf;
+	char 			*buf;
 	goffset 		size_offset;
-	guint32			*hash;
+	uint32_t			*hash;
 
 	self = CICHLID_HASH_MD5(object);
 	if (!self->hash_computed)
@@ -238,7 +236,7 @@ cichlid_hash_md5_get_hash (CichlidHash *object)
 	}
 
 	/* Copy the hash and switch endianness */
-	hash = g_malloc(sizeof(guint32)*4);
+	hash = g_malloc(sizeof(uint32_t)*4);
 	cichlid_hash_md5_flip_endianness(hash, self->p);
 
 	return hash;
@@ -249,11 +247,11 @@ cichlid_hash_md5_get_hash (CichlidHash *object)
  * @param object
  * @return a NULL-terminated string with the checksum if successful, else NULL.
  */
-static gchar *
-cichlid_hash_md5_get_hash_string (CichlidHash *object)
+static char *
+cichlid_hash_md5_get_hash_string(CichlidHash *object)
 {
-	gchar *hash_string;
-	guint32 *hash;
+	char *hash_string;
+	uint32_t *hash;
 
 	hash = cichlid_hash_md5_get_hash(object);
 	if (hash == NULL)
@@ -272,15 +270,15 @@ cichlid_hash_md5_get_hash_string (CichlidHash *object)
  * @param bytes_read size of data buffer
  */
 static void
-cichlid_hash_md5_calc (CichlidHashMd5 *self, const gchar *buf, gsize bytes_read)
+cichlid_hash_md5_calc(CichlidHashMd5 *self, const char *buf, size_t bytes_read)
 {
-	guint32 a, b, c, d, f, g, tmp, *w;
+	uint32_t a, b, c, d, f, g, tmp, *w;
 
 	/* Split buf into 512-bit chunks and process them */
-	for (gint j = 0; j < bytes_read/64; j++)
+	for (int j = 0; j < bytes_read/64; j++)
 	{
 		/* Set w to start at the proper place */
-		w = (guint32*)(buf + j*64);
+		w = (uint32_t*)(buf + j*64);
 		/* Initialize with the current values */
 		a = self->p[0];
 		b = self->p[1];
@@ -288,41 +286,41 @@ cichlid_hash_md5_calc (CichlidHashMd5 *self, const gchar *buf, gsize bytes_read)
 		d = self->p[3];
 
 		/* Calculate */
-	    for (gint i = 0; i < 64; i++)
-	    {
-	        if (i < 16)
-	        {
-	            f = (b & c) | ((~b) & d);
-	            g = i;
-	        }
-	        else if (i < 32)
-	        {
-	            f = (b & d) | (c & (~d));
-	            g = (5*i + 1) % 16;
-	        }
-	        else if (i < 48)
-	        {
-	            f = b ^ c ^ d;
-	            g = (3*i + 5) % 16;
-	        }
-	        else
-	        {
-	            f = c ^ (b | (~d));
-	            g = (7*i) % 16;
-	        }
+		for (int i = 0; i < 64; i++)
+		{
+			if (i < 16)
+			{
+				f = (b & c) | ((~b) & d);
+				g = i;
+			}
+			else if (i < 32)
+			{
+				f = (b & d) | (c & (~d));
+				g = (5*i + 1) % 16;
+			}
+			else if (i < 48)
+			{
+				f = b ^ c ^ d;
+				g = (3*i + 5) % 16;
+			}
+			else
+			{
+				f = c ^ (b | (~d));
+				g = (7*i) % 16;
+			}
 
-	        tmp = d;
-	        d = c;
-	        c = b;
-	        b = b + cichlid_hash_md5_rotate_left (a + f + shift_angle_table[i] + w[g], shift_lookup_table[i]);
-	        a = tmp;
-	    }
+			tmp = d;
+			d = c;
+			c = b;
+			b = b + cichlid_hash_md5_rotate_left (a + f + shift_angle_table[i] + w[g], shift_lookup_table[i]);
+			a = tmp;
+		}
 
-	    /* Add this chunks result to the total result */
-	    self->p[0] += a;
-	    self->p[1] += b;
-	    self->p[2] += c;
-	    self->p[3] += d;
+		/* Add this chunks result to the total result */
+		self->p[0] += a;
+		self->p[1] += b;
+		self->p[2] += c;
+		self->p[3] += d;
 	}
 }
 
@@ -331,8 +329,8 @@ cichlid_hash_md5_calc (CichlidHashMd5 *self, const gchar *buf, gsize bytes_read)
  * @param x the variable to be rotated
  * @param y the number of steps it should rotate
  */
-static inline guint32
-cichlid_hash_md5_rotate_left (guint32 x, guint32 y)
+static inline uint32_t
+cichlid_hash_md5_rotate_left(uint32_t x, uint32_t y)
 {
 	return ((x) << (y)) | ((x) >> (32-y));
 }
@@ -343,11 +341,11 @@ cichlid_hash_md5_rotate_left (guint32 x, guint32 y)
  * @param source
  */
 static inline void
-cichlid_hash_md5_flip_endianness (guint32 *destination, guint32 *source)
+cichlid_hash_md5_flip_endianness(uint32_t *destination, uint32_t *source)
 {
 	for (int i = 0; i < 4; i++)
 		destination[i] = ((source[i] & 0xFF) << 24) |
-						 ((source[i] & 0xFF00) << 8) |
-						 ((source[i] & 0xFF0000) >> 8) |
-						 ((source[i] & 0xFF000000) >> 24);
+		((source[i] & 0xFF00) << 8) |
+		((source[i] & 0xFF0000) >> 8) |
+		((source[i] & 0xFF000000) >> 24);
 }

@@ -21,30 +21,31 @@
 #define CICHLID_HASH_H
 
 #include <glib-object.h>
+#include <stdint.h>
 
-#define CICHLID_TYPE_HASH       		(cichlid_hash_get_type ())
-#define CICHLID_HASH(obj)       		(G_TYPE_CHECK_INSTANCE_CAST ((obj), CICHLID_TYPE_HASH, CichlidHash))
-#define CICHLID_IS_HASH(obj)			(G_TYPE_CHECK_INSTANCE_TYPE ((obj), CICHLID_TYPE_HASH))
-#define CICHLID_HASH_GET_INTERFACE(inst)	(G_TYPE_INSTANCE_GET_INTERFACE ((inst), CICHLID_TYPE_HASH, CichlidHashInterface))
+#define CICHLID_TYPE_HASH                (cichlid_hash_get_type())
+#define CICHLID_HASH(obj)                (G_TYPE_CHECK_INSTANCE_CAST((obj), CICHLID_TYPE_HASH, CichlidHash))
+#define CICHLID_IS_HASH(obj)             (G_TYPE_CHECK_INSTANCE_TYPE((obj), CICHLID_TYPE_HASH))
+#define CICHLID_HASH_GET_INTERFACE(inst) (G_TYPE_INSTANCE_GET_INTERFACE((inst), CICHLID_TYPE_HASH, CichlidHashInterface))
 
-typedef struct _CichlidHash			CichlidHash;
-typedef struct _CichlidHashInterface	CichlidHashInterface;
+typedef struct _CichlidHash	CichlidHash;
+typedef struct _CichlidHashInterface CichlidHashInterface;
 
 struct _CichlidHashInterface
 {
-  GObjectClass parent_iface;
+	GObjectClass parent_iface;
 
-  gboolean (* equals) (guint32* a, guint32* b);
-  guint32 *(* get_hash) (CichlidHash *self);
-  gchar   *(* get_hash_string) (CichlidHash *self);
-  void	   (* update) (CichlidHash *self, const gchar *data, gsize data_size);
+	gboolean  (* equals)          (uint32_t* a, uint32_t* b);
+	uint32_t *(* get_hash)        (CichlidHash *self);
+	char     *(* get_hash_string) (CichlidHash *self);
+	void      (* update)          (CichlidHash *self, const char *data, size_t data_size);
 };
 
-GType cichlid_hash_get_type (void);
+GType    cichlid_hash_get_type (void);
 
-gboolean cichlid_hash_equals (CichlidHash *self, guint32* a, guint32* b);
-guint32 *cichlid_hash_get_hash (CichlidHash *self);
-gchar *cichlid_hash_get_hash_string (CichlidHash *self);
-void cichlid_hash_update (CichlidHash *self, const gchar *data, gsize data_size);
+gboolean cichlid_hash_equals(CichlidHash *self, uint32_t* a, uint32_t* b);
+uint32_t *cichlid_hash_get_hash(CichlidHash *self);
+char   *cichlid_hash_get_hash_string(CichlidHash *self);
+void     cichlid_hash_update(CichlidHash *self, const char *data, size_t data_size);
 
 #endif /* CICHLID_HASH_H */

@@ -21,6 +21,6 @@
 #define CHECKSUM_FILE_H
 
 void checksum_file_load (GFile* file);
-gboolean checksum_file_load_init (gchar* filename);
+gboolean checksum_file_load_init (char* filename);
 
 #endif /* CHECKSUM_FILE_H */

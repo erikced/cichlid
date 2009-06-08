@@ -17,19 +17,15 @@
  * along with cichlid.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdint.h>
 #include <glib.h>
 #include <gio/gio.h>
+
 #include "cichlid_hash.h"
 
 static void
 cichlid_hash_init (gpointer g_class)
 {
-	static gboolean is_initialized = FALSE;
-	if (!is_initialized)
-	{
-		/* add properties and signals to the interface here */
-		is_initialized = TRUE;
-	}
 }
 
 GType
@@ -52,7 +48,7 @@ cichlid_hash_get_type (void)
 }
 
 gboolean
-cichlid_hash_equals (CichlidHash *self, guint32 *a, guint32 *b)
+cichlid_hash_equals (CichlidHash *self, uint32_t *a, uint32_t *b)
 {
 	gboolean retval;
 	g_return_val_if_fail (CICHLID_IS_HASH (self), FALSE);
@@ -63,20 +59,20 @@ cichlid_hash_equals (CichlidHash *self, guint32 *a, guint32 *b)
 	return retval;
 }
 
-guint32 *
+uint32_t *
 cichlid_hash_get_hash (CichlidHash *self)
 {
-	guint32 *retval;
+	uint32_t *retval;
 	g_return_val_if_fail (CICHLID_IS_HASH (self), NULL);
 
 	retval = CICHLID_HASH_GET_INTERFACE (self)->get_hash (self);
 	return retval;
 }
 
-gchar *
+char *
 cichlid_hash_get_hash_string (CichlidHash *self)
 {
-	gchar *retval;
+	char *retval;
 	g_return_val_if_fail (CICHLID_IS_HASH (self), NULL);
 
 	retval = CICHLID_HASH_GET_INTERFACE (self)->get_hash_string (self);
@@ -84,7 +80,7 @@ cichlid_hash_get_hash_string (CichlidHash *self)
 }
 
 void
-cichlid_hash_update (CichlidHash *self, const gchar *data, gsize data_size)
+cichlid_hash_update (CichlidHash *self, const char *data, size_t data_size)
 {
 	g_return_if_fail (CICHLID_IS_HASH(self));
 

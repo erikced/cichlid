@@ -31,8 +31,8 @@
 typedef struct
 {
 	GFile		   *file;
-	gchar 		   *name;
-	gint			status;
+	char 		   *name;
+	int			status;
 	gconstpointer	checksum;
 } CichlidParsedLineInfo;
 
@@ -41,30 +41,30 @@ typedef struct
 
 enum
 {
-  CHECKSUM_FIRST = 1,
-  CHECKSUM_LAST
+	CHECKSUM_FIRST = 1,
+	CHECKSUM_LAST
 };
 
 static guint        checksum_length = 0;		  /* Length of the hash (in hex chars) */
-static gint         checksum_order = 0;			  /* Order of filename / hash */
-static gchar        checksum_separator = '\0';	  /* Character separating the checksum from the filename if checksum_order = CHECKSUM_LAST
+static int          checksum_order = 0;			  /* Order of filename / hash */
+static char         checksum_separator = '\0';	  /* Character separating the checksum from the filename if checksum_order = CHECKSUM_LAST
 												     otherwise the number of characters between the checksum and the filename */
-static gchar        checksum_comment_char = '\0'; /* Character used to prepend comments in the checksum file */
+static char         checksum_comment_char = '\0'; /* Character used to prepend comments in the checksum file */
 static GList       *parsed_lines = NULL;
 static GStaticMutex parsed_lines_lock = G_STATIC_MUTEX_INIT;
 static guint        idle_func_id = 0;
-static GdkCursor   *cursor;
+static GdkCursor    *cursor;
 
 static gboolean	   checksum_file_add_file_to_list (gpointer data);
 static gboolean	   checksum_file_checksum_valid (char *const p_checksum, guint checksum_length);
 static gboolean    checksum_file_finish_load (gpointer data);
-static gchar      *checksum_file_get_base_path (GFile *file);
-static gchar      *checksum_file_get_extension (const char *filename);
+static char       *checksum_file_get_base_path (GFile *file);
+static char       *checksum_file_get_extension (const char *filename);
 static void        checksum_file_parse (GFile *checksum_file);
-static inline void checksum_file_read_checksum (guint32 *checksum, const gchar *checksum_start);
+static inline void checksum_file_read_checksum (uint32_t *checksum, const char *checksum_start);
 static void        checksum_file_set_filetype (GFile *file, GError **error);
-static void        checksum_file_set_filetype_options (gint hash, guint length, gint order, gchar separator, gchar comment_char);
-static void        checksum_file_queue_line (const gchar *filename, const gchar *base_path, gconstpointer checksum);
+static void        checksum_file_set_filetype_options (int hash, guint length, int order, char separator, char comment_char);
+static void        checksum_file_queue_line (const char *filename, const char *base_path, gconstpointer checksum);
 
 
 /**
@@ -73,8 +73,8 @@ static void        checksum_file_queue_line (const gchar *filename, const gchar 
  * @return NULL if unsuccessful, a newly created string containing the file extension otherwise.
  * Should be freed with g_free() when no longer needed.
  */
-static gchar*
-checksum_file_get_extension (const char *filename)
+static char *
+checksum_file_get_extension(const char *filename)
 {
 	char *p_ext_start;
 	char *extension = NULL;
@@ -93,7 +93,7 @@ checksum_file_get_extension (const char *filename)
  * @param returns any error as a GError.
  */
 static void
-checksum_file_set_filetype (GFile *file, GError **error)
+checksum_file_set_filetype(GFile *file, GError **error)
 {
 	GFileInfo *info;
 	const char *filename;
@@ -121,7 +121,7 @@ checksum_file_set_filetype (GFile *file, GError **error)
 }
 
 static void
-checksum_file_set_filetype_options (gint hash, guint length, gint order, gchar separator, gchar comment_char)
+checksum_file_set_filetype_options(int hash, guint length, int order, char separator, char comment_char)
 {
 	hash_type = hash;
 	checksum_length = length;
@@ -157,7 +157,7 @@ checksum_file_checksum_valid(char *const p_checksum, guint checksum_length)
 	return valid;
 }
 
-static gchar*
+static char *
 checksum_file_get_base_path(GFile *file)
 {
 	char *file_base_path;
@@ -171,7 +171,7 @@ checksum_file_get_base_path(GFile *file)
 }
 
 gboolean
-checksum_file_load_init(gchar *filename)
+checksum_file_load_init(char *filename)
 {
 	GFile *checksum_file;
 
@@ -187,7 +187,7 @@ checksum_file_load(GFile *checksum_file)
 {
 	GError *error = NULL;
 	GFileInfo *file_info;
-	gchar *filename;
+	char *filename;
 
 	g_assert(checksum_file != NULL);
 
@@ -234,14 +234,14 @@ checksum_file_parse (GFile *checksum_file)
 	GError **error = &err;
 	GFileInputStream *filestream;
 	GDataInputStream *datastream;
-	gchar 			 *read_line,
-					 *checksum_start, /* Start of the checksum in the read line */
-					 *filename_start, /* Start of the filename in the read line */
-					 *base_path,
-					 *filename;
-	gsize 			 line_length,
-					 filename_length;
-	gpointer 		 checksum;
+	char *read_line,
+	     *checksum_start, /* Start of the checksum in the read line */
+	     *filename_start, /* Start of the filename in the read line */
+	     *base_path,
+	     *filename;
+	size_t line_length,
+	       filename_length;
+	gpointer checksum;
 
 	g_assert(checksum_file != NULL && *error == NULL);
 
@@ -265,9 +265,9 @@ checksum_file_parse (GFile *checksum_file)
 		/* If the number of read chars is too short, the line begins with a comment
 		 * or a newline, skip it. */
 		if (line_length < checksum_length + 2 ||
-			*read_line == checksum_comment_char ||
-			*read_line == '\n' ||
-			*read_line == '\r')
+				*read_line == checksum_comment_char ||
+				*read_line == '\n' ||
+				*read_line == '\r')
 		{
 			g_free(read_line);
 			continue;
@@ -289,9 +289,9 @@ checksum_file_parse (GFile *checksum_file)
 
 		/* Make sure the checksum is valid (only hex chars, correct length) */
 		if (checksum_start == NULL ||
-			filename_length == 0 ||
-			line_length - (checksum_start - read_line) < checksum_length ||
-			!checksum_file_checksum_valid(checksum_start, checksum_length))
+				filename_length == 0 ||
+				line_length - (checksum_start - read_line) < checksum_length ||
+				!checksum_file_checksum_valid(checksum_start, checksum_length))
 		{
 			g_free(read_line);
 			continue;
@@ -332,11 +332,11 @@ checksum_file_parse (GFile *checksum_file)
  * Reads the checksum from checksum_start and stores it as an array of unsigned 32-bit integers
  */
 static inline void
-checksum_file_read_checksum (guint32 *checksum, const gchar *checksum_start)
+checksum_file_read_checksum (uint32_t *checksum, const char *checksum_start)
 {
 	char num[9];
 	num[8] = '\0';
-	for (gint i = 0; i < checksum_length/8; i++)
+	for (int i = 0; i < checksum_length/8; i++)
 	{
 		memcpy(num, checksum_start + 8*i, 8);
 		checksum[i] = strtoul(num, NULL, 16);
@@ -344,14 +344,14 @@ checksum_file_read_checksum (guint32 *checksum, const gchar *checksum_start)
 }
 
 static void
-checksum_file_queue_line (const gchar *filename, const gchar *base_path, gconstpointer checksum)
+checksum_file_queue_line (const char *filename, const char *base_path, gconstpointer checksum)
 {
 	GFile *file;
 	GFileInfo *info;
 	CichlidParsedLineInfo *lineinfo;
-	const gchar *name = NULL;
-	gchar *file_path;
-	gint status;
+	const char *name = NULL;
+	char *file_path;
+	int status;
 
 	file_path = g_strconcat(base_path,G_DIR_SEPARATOR_S,filename,NULL);
 
@@ -377,7 +377,7 @@ checksum_file_queue_line (const gchar *filename, const gchar *base_path, gconstp
 	lineinfo->checksum = checksum;
 
 	g_static_mutex_lock(&parsed_lines_lock);
-	parsed_lines = g_list_append(parsed_lines, lineinfo); /* Append is ok, this is relatively fast compared to the list anyway */
+	parsed_lines = g_list_append(parsed_lines, lineinfo);
 	g_static_mutex_unlock(&parsed_lines_lock);
 
 	if (info != NULL)
@@ -404,18 +404,18 @@ checksum_file_add_file_to_list (gpointer data)
 
 	list = g_list_reverse(list);
 
+	/* Remove files from the GList and add them to the GtkListStore */
 	while (list)
 	{
 		pli = list->data;
 		list = g_list_remove(list, pli);
 
-		/* Add to the liststore */
 		gtk_list_store_insert_with_values(files, NULL, G_MAXINT,
-										  GFILE, pli->file,
-										  NAME, pli->name,
-										  STATUS, pli->status,
-										  PRECALCULATED_CHECKSUM, pli->checksum,
-										  -1);
+				GFILE, pli->file,
+				NAME, pli->name,
+				STATUS, pli->status,
+				PRECALCULATED_CHECKSUM, pli->checksum,
+				-1);
 		g_free(pli->name);
 		cichlid_parsed_line_info_free(pli);
 	}

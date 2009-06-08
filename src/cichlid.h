@@ -34,12 +34,12 @@ enum
   N_COLUMNS
 };
 
-extern gint hash_type;
+extern int hash_type;
 extern GtkListStore *files;
 extern GtkTreeModel *files_filter;
 extern GtkTreeModel *files_sort;
 
-void add_file_to_list(const gchar*, const gchar*, gconstpointer);
+void add_file_to_list(const char*, const char*, gconstpointer);
 void on_verify_clicked(GtkWidget *widget, gpointer user_data);
 void on_file_menu_open_activate(GtkWidget *widget, gpointer user_data);
 void on_file_menu_quit_activate(GtkWidget *widget, gpointer user_data);

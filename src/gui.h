@@ -28,11 +28,11 @@ void ck_main_window_treeview_enable (gboolean enable);
 void ck_progress_dialog_new ();
 void ck_progress_dialog_delete ();
 void ck_progress_dialog_update (GMutex *lock,
-							    const gchar *current_file,
+							    const char *current_file,
 							    const guint *current_file_num,
 							    const guint *total_file_num,
-							    const gint *verified_file_size,
-							    const gint *total_file_size);
+							    const int *verified_file_size,
+							    const int *total_file_size);
 
 #endif /* GUI_H */
 

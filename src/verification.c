@@ -16,9 +16,12 @@
  * You should have received a copy of the GNU General Public License
  * along with cichlid.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 #include <glib.h>
 #include <gio/gio.h>
 #include <gtk/gtk.h>
+#include <stdint.h>
+#include <unistd.h>
 
 #include "verification.h"
 #include "cichlid.h"
@@ -31,7 +34,7 @@
 typedef struct
 {
 	GtkTreeIter iter;
-	gint status;
+	int status;
 } StatusUpdate;
 
 #define BUFFER_SIZE 1024*512
@@ -40,21 +43,21 @@ typedef struct
 #define status_update_new() g_slice_alloc(sizeof(StatusUpdate))
 #define status_update_free(p_status_update) g_slice_free1(sizeof(StatusUpdate),p_status_update)
 
-static void verify_files(gpointer data);
+static void     verify_files(gpointer data);
 static gboolean verification_complete(gboolean *started);
 static gboolean update_file_status(gpointer data);
 
-static gboolean 	active = FALSE;			/* True if verification is in progress */
-static guint 		timeout_id = 0,			/* ID of the g_timeout which runs update_file_status */
-					current_file_num = 0,	/* Index of current file */
-					total_file_num = 0;		/* Total number of files */
-static gint 		total_file_size = 0;	/* Size of all files (bytes / 1024) */
-static volatile gint verified_file_size = 0;/* Size of verified data (bytes / 1024) */
-static gchar 		*current_file;			/* Filename of current file */
+static gboolean 	 active = FALSE;			/* True if verification is in progress */
+static guint 		 timeout_id = 0,			/* ID of the g_timeout which runs update_file_status */
+                     current_file_num = 0,	/* Index of current file */
+                     total_file_num = 0;		/* Total number of files */
+static int 	     	 total_file_size = 0;	/* Size of all files (bytes / 1024) */
+static volatile int  verified_file_size = 0;/* Size of verified data (bytes / 1024) */
+static char 		*current_file;			/* Filename of current file */
 static GList 		*status_updates = NULL;	/* List of StatusUpdates for updated entries */
 static GMutex 		*status_updates_lock;	/* Lock used when adding/removing StatusUpdates from status_updates */
 static GMutex 		*progress_update_lock;	/* Lock used when changing current_file */
-static volatile 	gint abort = 0;			/* Abort flag, set to >0 to abort */
+static volatile int  abort = 0;			/* Abort flag, set to >0 to abort */
 
 gboolean
 cichlid_verification_start()
@@ -80,12 +83,11 @@ cichlid_verification_start()
 			info = g_file_query_info(file,G_FILE_ATTRIBUTE_STANDARD_SIZE,0,NULL,NULL);
 			if (info != NULL)
 			{
-				total_file_size += (gint)(g_file_info_get_attribute_uint64(info,G_FILE_ATTRIBUTE_STANDARD_SIZE) >> 10);
+				total_file_size += (int)(g_file_info_get_attribute_uint64(info,G_FILE_ATTRIBUTE_STANDARD_SIZE) >> 10);
 				g_object_unref(info);
 			}
 			++total_file_num;
-		}
-		while(gtk_tree_model_iter_next(GTK_TREE_MODEL(files),&iter));
+		} while(gtk_tree_model_iter_next(GTK_TREE_MODEL(files),&iter));
 	}
 
 	/* If there are no files to verify */
@@ -108,30 +110,30 @@ cichlid_verification_start()
 static void
 verify_files(gpointer data)
 {
-	CichlidHash *hashfunc;
-	GError *error = NULL;
-	GFile *file;
-	GtkTreeIter iter;
-	StatusUpdate *status_update;
-	gchar *buf;
-	gchar *filename;
-	guint32 *checksum;
-	guint32 *precalculated_checksum;
-	gboolean *started;
-	gssize bytes_read;
-	GFileInputStream 	*filestream;
+	CichlidHash      *hashfunc;
+	GError           *error = NULL;
+	GFile            *file;
+	GFileInputStream *filestream;
+	GtkTreeIter       iter;
+	StatusUpdate     *status_update;
+	char             *buf;
+	char             *filename;
+	uint32_t         *checksum;
+	uint32_t         *precalculated_checksum;
+	gboolean         *started;
+	ssize_t           bytes_read;
 
 	switch (hash_type)
 	{
-		case HASH_CRC32:
-			hashfunc = cichlid_hash_crc32_new();
-			break;
-		case HASH_MD5:
-			hashfunc = cichlid_hash_md5_new();
-			break;
-		default:
-			hashfunc = NULL;
-			break;
+	case HASH_CRC32:
+		hashfunc = cichlid_hash_crc32_new();
+		break;
+	case HASH_MD5:
+		hashfunc = cichlid_hash_md5_new();
+		break;
+	default:
+		hashfunc = NULL;
+		break;
 	}
 
 	buf = g_malloc(BUFFER_SIZE);
@@ -253,20 +255,20 @@ cichlid_verification_cancel()
 static gboolean
 update_file_status(gpointer data)
 {
-	StatusUpdate		*status_update;
-	GtkTreePath			*path,
-						*filter_path = NULL;
-	GtkTreeViewColumn	*column;
-	gboolean 			 updated = FALSE;
+	StatusUpdate	  *status_update;
+	GtkTreePath       *path,
+	                  *filter_path = NULL;
+	GtkTreeViewColumn *column;
+	gboolean 		   updated = FALSE;
 
 	/* Update the progress dialog */
-	gint verified_file_size_tmp = g_atomic_int_get(&verified_file_size);
+	int verified_file_size_tmp = g_atomic_int_get(&verified_file_size);
 	ck_progress_dialog_update(progress_update_lock,
-							  current_file,
-							  &current_file_num,
-							  &total_file_num,
-							  &verified_file_size_tmp,
-							  &total_file_size);
+			current_file,
+			&current_file_num,
+			&total_file_num,
+			&verified_file_size_tmp,
+			&total_file_size);
 
 	/* Update the filelist */
 	g_mutex_lock(status_updates_lock);

@@ -21,6 +21,7 @@
 #define CICHLID_HASH_MD5_H
 
 #include <glib-object.h>
+#include <stdint.h>
 
 #define CICHLID_TYPE_HASH_MD5       		(cichlid_hash_md5_get_type ())
 #define CICHLID_HASH_MD5(obj)       		(G_TYPE_CHECK_INSTANCE_CAST ((obj), CICHLID_TYPE_HASH_MD5, CichlidHashMd5))
@@ -37,10 +38,10 @@ struct _CichlidHashMd5
   GObject parent_instance;
 
   /* Private */
-  guint32 p[4];
-  gchar data_left[63];
-  gchar data_left_size;
-  guint64 total_size;
+  uint32_t p[4];
+  char     data_left[63];
+  char     data_left_size;
+  guint64  total_size;
   gboolean hash_computed;
 };
 
