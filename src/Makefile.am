@@ -5,8 +5,8 @@ bin_PROGRAMS = cichlid
 cichlid_SOURCES = \
 	cichlid.c \
 	cichlid.h \
-	checksum_file.c \
-	checksum_file.h \
+	cichlid_checksum_file.c \
+	cichlid_checksum_file.h \
 	gui.c \
 	gui.h \
 	verification.c \
@@ -16,9 +16,7 @@ cichlid_SOURCES = \
 	cichlid_hash_crc32.c \
 	cichlid_hash_crc32.h \
 	cichlid_hash_md5.c \
-	cichlid_hash_md5.h \
-	CichlidFile.c \
-	CichlidFile.h
+	cichlid_hash_md5.h
 
 cichlid_CFLAGS = \
 	-DPKGDATADIR=\""$(pkgdatadir)"\" \

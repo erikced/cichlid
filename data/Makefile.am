@@ -1,2 +1,2 @@
 uidir = $(pkgdatadir)
-dist_ui_DATA = crcchk.ui crcchk_progress_dialog.ui
+dist_ui_DATA = cichlid.ui cichlid_progress_dialog.ui

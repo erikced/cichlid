@@ -40,8 +40,8 @@ typedef struct
 #define BUFFER_SIZE 1024*512
 #define STATUS_UPDATE_INTERVAL 125 /* Milliseconds */
 /* Macros for creating and freeing status updates */
-#define status_update_new() g_slice_alloc(sizeof(StatusUpdate))
-#define status_update_free(p_status_update) g_slice_free1(sizeof(StatusUpdate),p_status_update)
+#define cichlid_status_update_new() g_slice_alloc(sizeof(StatusUpdate))
+#define cichlid_status_update_free(p_status_update) g_slice_free1(sizeof(StatusUpdate),p_status_update)
 
 static void     verify_files(gpointer data);
 static gboolean verification_complete(gboolean *started);

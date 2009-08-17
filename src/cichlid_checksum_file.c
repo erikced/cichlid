@@ -276,9 +276,6 @@ cichlid_checksum_file_load(CichlidChecksumFile *self, GFile *checksum_file)
 
 	if (error != NULL)
 		g_error_free(error);
-
-	g_signal_emit(G_OBJECT (self), signal_file_loaded, 0);
-
 }
 
 /**
@@ -427,7 +424,6 @@ cichlid_checksum_file_parse(CichlidChecksumFile *self)
 	/* For each line in the file */
 	while (1)
 	{
-		++i;
 		read_line = g_data_input_stream_read_line(datastream, &line_length, NULL, error);
 
 		/* If there was an error reading the file or the entire file is read */
@@ -494,7 +490,6 @@ cichlid_checksum_file_parse(CichlidChecksumFile *self)
 		g_error_free(*error);
 
 	self->file_parsed = TRUE;
-	g_debug("Files Added: %i",i);
 
 	g_free(base_path);
 	g_object_unref(datastream);
@@ -584,8 +579,12 @@ cichlid_checksum_file_insert_files(CichlidChecksumFile *self)
 	}
 	g_mutex_unlock(self->file_queue_lock);
 
+	/* All queued files are added and the file is completely parsed */
 	if (self->file_parsed && g_queue_is_empty(self->file_queue))
+	{
+		g_signal_emit(G_OBJECT (self), signal_file_loaded, 0);
 		return FALSE;
+	}
 
 	return TRUE;
 }
