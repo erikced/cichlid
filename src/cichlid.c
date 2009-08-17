@@ -22,37 +22,34 @@
 #include <string.h>
 #include <stdio.h>
 
-#include "CichlidFile.h"
 #include "cichlid.h"
 #include "gui.h"
-#include "checksum_file.h"
+#include "cichlid_checksum_file.h"
 #include "verification.h"
 
 #include "cichlid_hash.h"
 #include "cichlid_hash_md5.h"
 
 
-GtkListStore *files;
+//GtkListStore *files;
 GtkTreeModel *files_filter;
 GtkTreeModel *files_sort;
-static guint filter_flags = (1 << GOOD) | (1 << BAD) | (1 << NOT_VERIFIED) | (1 << NOT_FOUND);
+CichlidChecksumFile *cfile;
+static guint filter_flags = (1 << STATUS_GOOD) | (1 << STATUS_BAD) | (1 << STATUS_NOT_VERIFIED) | (1 << STATUS_NOT_FOUND);
 
 int hash_type = HASH_UNKNOWN;
 
-static void clear_filelist();
 void on_verify_clicked(GtkWidget *widget, gpointer user_data);
 
 void
 on_main_window_destroy(GtkWidget *widget, gpointer user_data)
 {
-	clear_filelist();
 	gtk_main_quit();
 }
 
 void
 on_file_menu_quit_activate(GtkWidget *widget, gpointer user_data)
 {
-	clear_filelist();
 	gtk_main_quit();
 }
 
@@ -85,10 +82,10 @@ on_file_menu_open_activate(GtkWidget *widget, gpointer user_data)
 
 	if (file)
 	{
-		ck_main_window_treeview_enable(FALSE);
-		clear_filelist();
-		ck_main_window_treeview_enable(TRUE);
-		checksum_file_load(file);
+		//ck_main_window_treeview_enable(FALSE);
+		//clear_filelist();
+		//ck_main_window_treeview_enable(TRUE);
+		cichlid_checksum_file_load(cfile, file);
 		g_object_unref(file);
 	}
 }
@@ -110,85 +107,21 @@ on_filter_changed(GtkWidget *cb_filter, gpointer user_data)
 	switch (active)
 	{
 		case 0:
-			filter_flags = (1 << GOOD) | (1 << BAD) | (1 << NOT_VERIFIED) | (1 << NOT_FOUND);
+			filter_flags = (1 << STATUS_GOOD) | (1 << STATUS_BAD) | (1 << STATUS_NOT_VERIFIED) | (1 << STATUS_NOT_FOUND);
 			break;
 		case 1:
-			filter_flags = (1 << GOOD);
+			filter_flags = (1 << STATUS_GOOD);
 			break;
 		case 2:
-			filter_flags = (1 << BAD);
+			filter_flags = (1 << STATUS_BAD);
 			break;
 		case 3:
-			filter_flags = (1 << NOT_FOUND);
+			filter_flags = (1 << STATUS_NOT_FOUND);
 			break;
 	}
 	ck_main_window_treeview_enable(FALSE);
 	gtk_tree_model_filter_refilter(GTK_TREE_MODEL_FILTER(files_filter));
 	ck_main_window_treeview_enable(TRUE);
-}
-/**
- * Adds the file to the file list
- * @param the path to the file (relative or absolute) as a NULL-terminated string.
- * @param a pointer to a precalculated checksum from the SFV/MD5/SHA1 file.
- */
-void
-add_file_to_list(const char *filename, const char* base_path, gconstpointer precalculated_checksum)
-{
-	GFile *file;
-	GFileInfo *info;
-	const char *name = NULL;
-	char *file_path;
-	int status;
-
-	file_path = g_strconcat(base_path,G_DIR_SEPARATOR_S,filename,NULL);
-
-	file = g_file_new_for_commandline_arg(file_path);
-
-	/* Get the filename */
-	info = g_file_query_info(file,G_FILE_ATTRIBUTE_STANDARD_DISPLAY_NAME,0,NULL,NULL);
-	if (info != NULL)
-		name = g_file_info_get_attribute_string(info,G_FILE_ATTRIBUTE_STANDARD_DISPLAY_NAME);
-
-	if (name == NULL)
-	{
-		name = filename;
-		status = NOT_FOUND;
-	}
-	else
-		status = NOT_VERIFIED;
-
-	/* Add to the liststore */
-	gtk_list_store_insert_with_values(files, NULL, G_MAXINT,
-									  GFILE, file,
-									  NAME, name,
-									  STATUS, status,
-									  PRECALCULATED_CHECKSUM, precalculated_checksum,
-									  -1);
-
-	if (info != NULL)
-		g_object_unref(info);
-	g_free(file_path);
-}
-
-static void
-clear_filelist()
-{
-	gpointer checksum;
-	GFile *file;
-	GtkTreeIter iter;
-
-	if (gtk_tree_model_get_iter_first(GTK_TREE_MODEL(files), &iter))
-	{
-		do
-		{
-			gtk_tree_model_get(GTK_TREE_MODEL(files), &iter, GFILE, &file, PRECALCULATED_CHECKSUM, &checksum, -1);
-			g_object_unref(file);
-			if (checksum != NULL)
-				g_free(checksum);
-		}
-		while (gtk_list_store_remove(files,&iter));
-	}
-	gtk_list_store_clear(files);
 }
 
 void
@@ -196,20 +129,20 @@ render_status_text(GtkTreeViewColumn *column, GtkCellRenderer *renderer, GtkTree
 {
 	int status;
 	char *status_text;
-	gtk_tree_model_get(model, iter, STATUS, &status, -1);
+	gtk_tree_model_get(model, iter, CICHLID_CHECKSUM_FILE_STATUS, &status, -1);
 
 	switch (status)
 	{
-		case GOOD:
+		case STATUS_GOOD:
 			status_text = "Ok";
 			break;
-		case BAD:
+		case STATUS_BAD:
 			status_text = "Corrupt";
 			break;
-		case NOT_VERIFIED:
+		case STATUS_NOT_VERIFIED:
 			status_text = "Not verified";
 			break;
-		case NOT_FOUND:
+		case STATUS_NOT_FOUND:
 			status_text = "Missing";
 			break;
 		default:
@@ -227,12 +160,12 @@ filelist_filter_func(GtkTreeModel *model, GtkTreeIter *iter, gpointer user_data)
 {
 	gboolean visible;
 
-	if (filter_flags == ((1 << GOOD) | (1 << BAD) | (1 << NOT_VERIFIED) | (1 << NOT_FOUND)))
+	if (filter_flags == ((1 << STATUS_GOOD) | (1 << STATUS_BAD) | (1 << STATUS_NOT_VERIFIED) | (1 << STATUS_NOT_FOUND)))
 		visible = TRUE;
 	else
 	{
 		int status;
-		gtk_tree_model_get(model, iter, STATUS, &status, -1);
+		gtk_tree_model_get(model, iter, CICHLID_CHECKSUM_FILE_STATUS, &status, -1);
 
 		if ((1 << status) & filter_flags)
 			visible = TRUE;
@@ -296,22 +229,9 @@ filelist_status_sort_func(GtkTreeModel *model, GtkTreeIter *a, GtkTreeIter *b, g
 }
 
 static void
-init_filelist()
+on_file_loaded(CichlidChecksumFile *cfile, gpointer user_data)
 {
-	/* Create and configure the ListStore which holds all files */
-	files = gtk_list_store_new(N_COLUMNS,
-							   G_TYPE_POINTER, /* GFile */
-							   G_TYPE_STRING,  /* Filename */
-							   G_TYPE_INT,	   /* Status */
-							   G_TYPE_POINTER);/* Precalculated checksum */
-
-	files_filter = gtk_tree_model_filter_new(GTK_TREE_MODEL(files), NULL);
-	gtk_tree_model_filter_set_visible_func(GTK_TREE_MODEL_FILTER(files_filter), filelist_filter_func, NULL, NULL);
-
-	/* files_sort = gtk_tree_model_sort_new_with_model(GTK_TREE_MODEL(files_filter));
-	gtk_tree_sortable_set_sort_func(GTK_TREE_SORTABLE(files_sort), NAME, filelist_name_sort_func, NULL, NULL);
-	gtk_tree_sortable_set_sort_func(GTK_TREE_SORTABLE(files_sort), STATUS, filelist_status_sort_func, NULL, NULL);
-	gtk_tree_sortable_set_sort_column_id(GTK_TREE_SORTABLE(files_sort),NAME,GTK_SORT_ASCENDING); */
+	g_debug("File Loaded");
 }
 
 int
@@ -326,11 +246,15 @@ main(int argc, char **argv)
 	g_thread_init(NULL);
 	gtk_init(&argc,&argv);
 
-	init_filelist();
+	/* Initialize the CichlidChecksumFile and the Filter */
+	cfile = g_object_new(CICHLID_TYPE_CHECKSUM_FILE, NULL);
+	g_signal_connect(G_OBJECT(cfile), "file-loaded", G_CALLBACK(on_file_loaded), NULL);
 
-	/* Read and parse the file with checksums if possible */
-	if (filename != NULL)
-		g_idle_add((GSourceFunc)checksum_file_load_init,filename);
+	files_filter = gtk_tree_model_filter_new(GTK_TREE_MODEL(cfile), NULL);
+	gtk_tree_model_filter_set_visible_func(GTK_TREE_MODEL_FILTER(files_filter), filelist_filter_func, NULL, NULL);
+
+	/* Read and parse the file with checksums if possible */	//if (filename != NULL)
+	//g_idle_add((GSourceFunc)checksum_file_load_init,filename);
 
 	/* Build the UI */
 	ck_main_window_new(GTK_TREE_MODEL(files_filter),&error);

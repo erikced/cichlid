@@ -20,6 +20,27 @@
 #ifndef CHECKSUM_FILE_H
 #define CHECKSUM_FILE_H
 
+
+typedef enum
+{
+	first = 1,
+	last
+} checksum_position;
+
+
+
+typedef struct
+{
+	GFile       *file;
+	GList       *files;
+
+	/* Checksum Options */
+	const uint8_t     cs_length;
+	const uint8_t     cs_order;
+	checksum_position cs_position
+	const char        cs_separator;
+} CichlidChecksumFile;
+
 void checksum_file_load (GFile* file);
 gboolean checksum_file_load_init (char* filename);
 

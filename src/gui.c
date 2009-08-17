@@ -23,6 +23,7 @@
 
 #include "gui.h"
 #include "cichlid.h"
+#include "cichlid_checksum_file.h"
 #include "verification.h"
 
 #define MAIN_UI_SYSTEM PKGDATADIR"/cichlid.ui"
@@ -105,13 +106,13 @@ ck_main_window_treeview_init(GtkTreeModel *model)
 
 	/* Filename column */
 	renderer = gtk_cell_renderer_text_new();
-	column = gtk_tree_view_column_new_with_attributes(C_("Computer file","File"),renderer, "text", NAME, NULL);
+	column = gtk_tree_view_column_new_with_attributes(C_("Computer file","File"),renderer, "text", CICHLID_CHECKSUM_FILE_FILENAME, NULL);
 	//gtk_tree_view_column_set_sort_column_id(column, NAME);
 	gtk_tree_view_append_column(GTK_TREE_VIEW(filelist), column);
 
 	/* Status column */
 	renderer = gtk_cell_renderer_text_new();
-	column = gtk_tree_view_column_new_with_attributes(_("Status"),renderer, "text", STATUS, NULL);
+	column = gtk_tree_view_column_new_with_attributes(_("Status"),renderer, "text", CICHLID_CHECKSUM_FILE_STATUS, NULL);
 	gtk_tree_view_column_set_cell_data_func(column, renderer, render_status_text, NULL, NULL);
 	//gtk_tree_view_column_set_sort_column_id(column, STATUS);
 	gtk_tree_view_append_column(GTK_TREE_VIEW(filelist), column);

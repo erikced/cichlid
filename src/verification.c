@@ -23,13 +23,13 @@
 #include <stdint.h>
 #include <unistd.h>
 
-#include "verification.h"
+#include "cichlid_checksum_file.h"
 #include "cichlid.h"
 #include "cichlid_hash.h"
 #include "cichlid_hash_crc32.h"
 #include "cichlid_hash_md5.h"
-#include "CichlidFile.h"
 #include "gui.h"
+#include "verification.h"
 
 typedef struct
 {
@@ -75,20 +75,20 @@ cichlid_verification_start()
 
 	/* Calculate the number of files and their total size
 	 * Size might end up negative on a 32bit system if total file size > ~2TB */
-	if(gtk_tree_model_get_iter_first(GTK_TREE_MODEL(files),&iter))
-	{
-		do
-		{
-			gtk_tree_model_get(GTK_TREE_MODEL(files), &iter, GFILE, &file, -1);
-			info = g_file_query_info(file,G_FILE_ATTRIBUTE_STANDARD_SIZE,0,NULL,NULL);
-			if (info != NULL)
-			{
-				total_file_size += (int)(g_file_info_get_attribute_uint64(info,G_FILE_ATTRIBUTE_STANDARD_SIZE) >> 10);
-				g_object_unref(info);
-			}
-			++total_file_num;
-		} while(gtk_tree_model_iter_next(GTK_TREE_MODEL(files),&iter));
-	}
+//	if(gtk_tree_model_get_iter_first(GTK_TREE_MODEL(files),&iter))
+//	{
+//		do
+//		{
+//			gtk_tree_model_get(GTK_TREE_MODEL(files), &iter, GFILE, &file, -1);
+//			info = g_file_query_info(file,G_FILE_ATTRIBUTE_STANDARD_SIZE,0,NULL,NULL);
+//			if (info != NULL)
+//			{
+//				total_file_size += (int)(g_file_info_get_attribute_uint64(info,G_FILE_ATTRIBUTE_STANDARD_SIZE) >> 10);
+//				g_object_unref(info);
+//			}
+//			++total_file_num;
+//		} while(gtk_tree_model_iter_next(GTK_TREE_MODEL(files),&iter));
+//	}
 
 	/* If there are no files to verify */
 	if (total_file_size == 0)
@@ -139,13 +139,13 @@ verify_files(gpointer data)
 	buf = g_malloc(BUFFER_SIZE);
 
 	/* If the ListStore is not empty, iterate over it and verify the files */
-	if (hashfunc != NULL && gtk_tree_model_get_iter_first(GTK_TREE_MODEL(files),&iter))
+	//if (hashfunc != NULL && gtk_tree_model_get_iter_first(GTK_TREE_MODEL(files),&iter))
 	{
 		current_file = NULL;
-		do
+		//do
 		{
 			/* Get the filename */
-			gtk_tree_model_get(GTK_TREE_MODEL(files), &iter, NAME, &filename, GFILE, &file, PRECALCULATED_CHECKSUM, &precalculated_checksum, -1);
+		//	gtk_tree_model_get(GTK_TREE_MODEL(files), &iter, NAME, &filename, GFILE, &file, PRECALCULATED_CHECKSUM, &precalculated_checksum, -1);
 
 			/* Update the verification status */
 			g_mutex_lock(progress_update_lock);
@@ -176,13 +176,13 @@ verify_files(gpointer data)
 			status_update->iter = iter;
 
 			if (cichlid_hash_equals(hashfunc, checksum, precalculated_checksum))
-				status_update->status = GOOD;
+				status_update->status = STATUS_GOOD;
 			else if(error != NULL)
-				status_update->status = NOT_FOUND;
+				status_update->status = STATUS_NOT_FOUND;
 			else if(g_atomic_int_get(&abort))
-				status_update->status = NOT_VERIFIED;
+				status_update->status = STATUS_NOT_VERIFIED;
 			else
-				status_update->status = BAD;
+				status_update->status = STATUS_BAD;
 
 			g_mutex_lock(status_updates_lock);
 			status_updates = g_list_prepend(status_updates,status_update);
@@ -202,10 +202,10 @@ verify_files(gpointer data)
 				checksum = NULL;
 			}
 
-			if (g_atomic_int_get(&abort))
-				break;
+//			if (g_atomic_int_get(&abort))
+//				break;
 		}
-		while(gtk_tree_model_iter_next(GTK_TREE_MODEL(files),&iter));
+		//while(gtk_tree_model_iter_next(GTK_TREE_MODEL(files),&iter));
 
 		g_free(buf);
 		g_object_unref(hashfunc);
@@ -276,13 +276,13 @@ update_file_status(gpointer data)
 	while(status_updates)
 	{
 		status_update = status_updates->data;
-		gtk_list_store_set(files,&status_update->iter,STATUS,status_update->status,-1);
+		//gtk_list_store_set(files,&status_update->iter,STATUS,status_update->status,-1);
 		status_updates = g_list_remove(status_updates,status_update);
 
 		/* If this is the last updated post shown and the treeview is not selected, update its position */
 		if (!updated && !GTK_WIDGET_HAS_FOCUS(filelist))
 		{
-			path = gtk_tree_model_get_path (GTK_TREE_MODEL(files), &status_update->iter);
+			//path = gtk_tree_model_get_path (GTK_TREE_MODEL(files), &status_update->iter);
 			if (path)
 				filter_path = gtk_tree_model_filter_convert_child_path_to_path (GTK_TREE_MODEL_FILTER(files_filter), path);
 

@@ -81,8 +81,8 @@ static const uint32_t shift_angle_table[64] = {
 		0xf7537e82, 0xbd3af235, 0x2ad7d2bb, 0xeb86d391
 };
 
-G_DEFINE_TYPE_WITH_CODE (CichlidHashMd5, cichlid_hash_md5, G_TYPE_OBJECT,
-		G_IMPLEMENT_INTERFACE (CICHLID_TYPE_HASH, cichlid_hash_interface_init))
+G_DEFINE_TYPE_WITH_CODE(CichlidHashMd5, cichlid_hash_md5, G_TYPE_OBJECT,
+		G_IMPLEMENT_INTERFACE(CICHLID_TYPE_HASH, cichlid_hash_interface_init));
 
 /*
  * Initialize the interface

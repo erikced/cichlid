@@ -19,12 +19,6 @@
 #ifndef CICHLID_H
 #define CICHLID_H
 
-/* Error Definitions */
-enum
-{
-	CICHLID_ERROR_BADCF
-};
-
 enum
 {
   GFILE = 0,
