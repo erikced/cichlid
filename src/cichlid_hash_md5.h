@@ -3,6 +3,10 @@
  *
  * cichlid - cichlid_hash_md5.h
  *
+ * Class for computing checksums according to the
+ * RSA Data Security, Inc. MD5 Message-Digest Algorithm
+ * as defined in RFC 1321 from April 1992.
+ *
  * cichlid is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
