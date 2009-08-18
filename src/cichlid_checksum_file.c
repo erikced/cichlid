@@ -143,7 +143,6 @@ cichlid_checksum_file_class_init(CichlidChecksumFileClass *klass)
 
 }
 
-
 static void
 cichlid_checksum_file_init(CichlidChecksumFile *self)
 {
@@ -582,7 +581,7 @@ cichlid_checksum_file_insert_files(CichlidChecksumFile *self)
 	/* All queued files are added and the file is completely parsed */
 	if (self->file_parsed && g_queue_is_empty(self->file_queue))
 	{
-		g_signal_emit(G_OBJECT (self), signal_file_loaded, 0);
+				(G_OBJECT (self), signal_file_loaded, 0);
 		return FALSE;
 	}
 
