@@ -7,10 +7,10 @@ cichlid_SOURCES = \
 	cichlid.h \
 	cichlid_checksum_file.c \
 	cichlid_checksum_file.h \
+	cichlid_checksum_file_v.c \
+	cichlid_checksum_file_v.h \
 	gui.c \
 	gui.h \
-	verification.c \
-	verification.h \
 	cichlid_hash.c \
 	cichlid_hash.h \
 	cichlid_hash_crc32.c \

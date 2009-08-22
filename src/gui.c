@@ -24,7 +24,7 @@
 #include "gui.h"
 #include "cichlid.h"
 #include "cichlid_checksum_file.h"
-#include "verification.h"
+#include "cichlid_checksum_file_v.h"
 
 #define MAIN_UI_SYSTEM PKGDATADIR"/cichlid.ui"
 #define MAIN_UI_SOURCE "data/cichlid.ui"
@@ -42,6 +42,7 @@ static GtkWidget *about;
 
 static void ck_main_window_treeview_init(GtkTreeModel *model);
 static void on_about_activate();
+static void render_status_text(GtkTreeViewColumn *column, GtkCellRenderer *renderer, GtkTreeModel *model, GtkTreeIter *iter, gpointer user_data);
 
 void
 ck_gui_allow_actions(gboolean allow)
@@ -161,11 +162,11 @@ ck_progress_dialog_new(volatile int *abort)
 	}
 
 	progress_dialog = GTK_DIALOG(gtk_builder_get_object(WindowBuilder,"progress_dialog"));
-	g_signal_connect(G_OBJECT(progress_dialog), "close", G_CALLBACK(cichlid_verification_cancel), NULL);
+	//g_signal_connect(G_OBJECT(progress_dialog), "close", G_CALLBACK(cichlid_verification_cancel), NULL);
 	progress_dialog_progress_bar = GTK_PROGRESS_BAR(gtk_builder_get_object(WindowBuilder,"progressbar"));
 	progress_dialog_file_label = GTK_LABEL(gtk_builder_get_object(WindowBuilder,"current_file"));
 	progress_dialog_abort = GTK_BUTTON(gtk_builder_get_object(WindowBuilder,"btn_cancel"));
-	g_signal_connect(G_OBJECT(progress_dialog_abort), "clicked", G_CALLBACK(cichlid_verification_cancel), NULL);
+	//g_signal_connect(G_OBJECT(progress_dialog_abort), "clicked", G_CALLBACK(cichlid_verification_cancel), NULL);
 	g_object_unref(WindowBuilder);
 
 	gtk_widget_show_all(GTK_WIDGET(progress_dialog));
@@ -238,3 +239,30 @@ on_about_activate()
 
 }
 
+static void
+render_status_text(GtkTreeViewColumn *column, GtkCellRenderer *renderer, GtkTreeModel *model, GtkTreeIter *iter, gpointer user_data)
+{
+	int status;
+	char *status_text;
+	gtk_tree_model_get(model, iter, CICHLID_CHECKSUM_FILE_STATUS, &status, -1);
+
+	switch (status)
+	{
+		case STATUS_GOOD:
+			status_text = _("Ok");
+			break;
+		case STATUS_BAD:
+			status_text = _("Corrupt");
+			break;
+		case STATUS_NOT_VERIFIED:
+			status_text = _("Not verified");
+			break;
+		case STATUS_NOT_FOUND:
+			status_text = _("Missing");
+			break;
+		default:
+			status_text = "";
+	}
+
+	g_object_set(renderer, "text", status_text, NULL);
+}

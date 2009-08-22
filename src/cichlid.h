@@ -19,13 +19,12 @@
 #ifndef CICHLID_H
 #define CICHLID_H
 
+/* Error Definitions */
 enum
 {
-  GFILE = 0,
-  NAME,
-  STATUS,
-  PRECALCULATED_CHECKSUM,
-  N_COLUMNS
+	CIHLID_ERROR = 0,
+	CICHLID_ERROR_BADCF,
+	CICHLID_ERROR_UNKNOWN_HASH
 };
 
 extern int hash_type;
@@ -38,7 +37,6 @@ void on_verify_clicked(GtkWidget *widget, gpointer user_data);
 void on_file_menu_open_activate(GtkWidget *widget, gpointer user_data);
 void on_file_menu_quit_activate(GtkWidget *widget, gpointer user_data);
 void on_filter_changed(GtkWidget *widget, gpointer user_data);
-void render_status_text(GtkTreeViewColumn *column, GtkCellRenderer *renderer, GtkTreeModel *model, GtkTreeIter *iter, gpointer user_data);
 
 #endif /* CICHLID_H */
 

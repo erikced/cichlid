@@ -25,16 +25,25 @@
 #include "cichlid.h"
 #include "gui.h"
 #include "cichlid_checksum_file.h"
-#include "verification.h"
+#include "cichlid_checksum_file_v.h"
 
 #include "cichlid_hash.h"
 #include "cichlid_hash_md5.h"
 
+enum
+{
+  GFILE = 0,
+  NAME,
+  STATUS,
+  PRECALCULATED_CHECKSUM,
+  N_COLUMNS
+};
 
 //GtkListStore *files;
 GtkTreeModel *files_filter;
 GtkTreeModel *files_sort;
 CichlidChecksumFile *cfile;
+CichlidChecksumFileVerifier *v;
 static guint filter_flags = (1 << STATUS_GOOD) | (1 << STATUS_BAD) | (1 << STATUS_NOT_VERIFIED) | (1 << STATUS_NOT_FOUND);
 
 int hash_type = HASH_UNKNOWN;
@@ -93,7 +102,7 @@ on_file_menu_open_activate(GtkWidget *widget, gpointer user_data)
 void
 on_verify_clicked(GtkWidget *widget, gpointer user_data)
 {
-	cichlid_verification_start();
+	cichlid_checksum_file_verifier_start(v, NULL);
 }
 
 /**
@@ -122,34 +131,6 @@ on_filter_changed(GtkWidget *cb_filter, gpointer user_data)
 	ck_main_window_treeview_enable(FALSE);
 	gtk_tree_model_filter_refilter(GTK_TREE_MODEL_FILTER(files_filter));
 	ck_main_window_treeview_enable(TRUE);
-}
-
-void
-render_status_text(GtkTreeViewColumn *column, GtkCellRenderer *renderer, GtkTreeModel *model, GtkTreeIter *iter, gpointer user_data)
-{
-	int status;
-	char *status_text;
-	gtk_tree_model_get(model, iter, CICHLID_CHECKSUM_FILE_STATUS, &status, -1);
-
-	switch (status)
-	{
-		case STATUS_GOOD:
-			status_text = "Ok";
-			break;
-		case STATUS_BAD:
-			status_text = "Corrupt";
-			break;
-		case STATUS_NOT_VERIFIED:
-			status_text = "Not verified";
-			break;
-		case STATUS_NOT_FOUND:
-			status_text = "Missing";
-			break;
-		default:
-			status_text = "";
-	}
-
-	g_object_set(renderer, "text", status_text, NULL);
 }
 
 /**
@@ -250,11 +231,14 @@ main(int argc, char **argv)
 	cfile = g_object_new(CICHLID_TYPE_CHECKSUM_FILE, NULL);
 	g_signal_connect(G_OBJECT(cfile), "file-loaded", G_CALLBACK(on_file_loaded), NULL);
 
+	v = cichlid_checksum_file_verifier_new(cfile);
+
 	files_filter = gtk_tree_model_filter_new(GTK_TREE_MODEL(cfile), NULL);
 	gtk_tree_model_filter_set_visible_func(GTK_TREE_MODEL_FILTER(files_filter), filelist_filter_func, NULL, NULL);
 
-	/* Read and parse the file with checksums if possible */	//if (filename != NULL)
-	//g_idle_add((GSourceFunc)checksum_file_load_init,filename);
+	/* Read and parse the file with checksums if possible */
+	if (filename != NULL)
+		cichlid_checksum_file_load_from_cmd(cfile, filename);
 
 	/* Build the UI */
 	ck_main_window_new(GTK_TREE_MODEL(files_filter),&error);

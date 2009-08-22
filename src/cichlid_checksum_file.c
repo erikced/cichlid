@@ -25,6 +25,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "cichlid.h"
 #include "cichlid_hash.h"
 #include "cichlid_checksum_file.h"
 
@@ -33,12 +34,15 @@ enum
 {
 	FILENAME_COLUMN = 0,
 	STATUS_COLUMN,
+	GFILE_COLUMN,
+	CHECKSUM_COLUMN,
 	N_COLUMNS
 };
 
 enum
 {
-	LS_FILE_COLUMN = 0
+	LS_FILE_COLUMN = 0,
+	LS_N_COLUMNS
 };
 
 /* Checksum position */
@@ -150,7 +154,7 @@ cichlid_checksum_file_init(CichlidChecksumFile *self)
 
 	/* Initiera variabler */
 	GType types[] = { G_TYPE_POINTER };
-	gtk_list_store_set_column_types(GTK_LIST_STORE(self), 1, types);
+	gtk_list_store_set_column_types(GTK_LIST_STORE(self), LS_N_COLUMNS, types);
 
 	self->file_queue = g_queue_new();
 	self->file_queue_lock = g_mutex_new ();
@@ -173,6 +177,8 @@ cichlid_checksum_file_get_column_type(GtkTreeModel *self, int column)
 	GType types[] = {
 		G_TYPE_STRING,
 		G_TYPE_INT,
+		G_TYPE_OBJECT,
+		G_TYPE_POINTER
 	};
 
 	/* validate our parameters */
@@ -224,18 +230,26 @@ cichlid_checksum_file_get_value(GtkTreeModel *self, GtkTreeIter *iter, int colum
         	g_value_set_int(value, cf->status);
         	break;
 
+        case GFILE_COLUMN:
+        	g_value_set_object(value, cf->file);
+        	break;
+
+        case CHECKSUM_COLUMN:
+        	g_value_set_pointer(value, (gpointer)cf->checksum);
+        	break;
+
         default:
         	g_assert_not_reached();
         }
 }
 
-gboolean
-cichlid_checksum_file_load_async(CichlidChecksumFile *self, const char *filename)
+void
+cichlid_checksum_file_load_from_cmd(CichlidChecksumFile *self, const char *filename)
 {
 	GFile *file;
 	file = g_file_new_for_commandline_arg(filename);
 
-	return FALSE;
+	cichlid_checksum_file_load(self, file);
 }
 
 void
@@ -311,6 +325,7 @@ cichlid_checksum_file_set_filetype(CichlidChecksumFile *self, GFile *file, GErro
 
 	g_return_if_fail(CICHLID_IS_CHECKSUM_FILE(self));
 	g_return_if_fail(file != NULL);
+	g_return_if_fail(error == NULL || *error == NULL);
 
 	info = g_file_query_info(file,G_FILE_ATTRIBUTE_STANDARD_NAME,0,NULL,error);
 
@@ -327,7 +342,7 @@ cichlid_checksum_file_set_filetype(CichlidChecksumFile *self, GFile *file, GErro
 	else
 	{
 		cichlid_checksum_file_set_filetype_options(self, HASH_UNKNOWN, 0, 0, '\0','\0');
-		*error = g_error_new(g_quark_from_string("cichlid"),CICHLID_ERROR_BADCF,"The file type of %s could not be determined",filename);
+		g_set_error(error, g_quark_from_string("cichlid"), CICHLID_ERROR_BADCF, "The file type of %s could not be determined",filename);
 	}
 
 	g_object_unref(info);
@@ -581,9 +596,48 @@ cichlid_checksum_file_insert_files(CichlidChecksumFile *self)
 	/* All queued files are added and the file is completely parsed */
 	if (self->file_parsed && g_queue_is_empty(self->file_queue))
 	{
-				(G_OBJECT (self), signal_file_loaded, 0);
+		g_signal_emit(G_OBJECT (self), signal_file_loaded, 0);
 		return FALSE;
 	}
 
 	return TRUE;
+}
+
+void
+cichlid_checksum_file_set(CichlidChecksumFile *self, GtkTreeIter *iter, int column, GValue *value)
+{
+	CichlidFile *f;
+	GtkTreePath *path;
+
+	g_return_if_fail(CICHLID_IS_CHECKSUM_FILE(self));
+	g_return_if_fail(column >= 0 && column < N_COLUMNS);
+	g_return_if_fail(G_IS_VALUE(value));
+
+	f = cichlid_checksum_file_get_object(self, iter);
+
+	switch (column)
+	{
+	case FILENAME_COLUMN:
+		if (f->name != NULL)
+			g_free(f->name);
+		f->name = g_strdup(g_value_get_string(value));
+		break;
+	case STATUS_COLUMN:
+		f->status = g_value_get_int(value);
+		break;
+	case GFILE_COLUMN:
+		if (f->file != NULL)
+			g_object_unref(f->file);
+		f->file = G_FILE(g_value_get_object(value));
+		break;
+	case CHECKSUM_COLUMN:
+		g_error("Checksum cannot be updated");
+
+	default:
+		g_assert_not_reached();
+	}
+
+	path = gtk_tree_model_get_path(GTK_TREE_MODEL(self), iter);
+	gtk_tree_model_row_changed(GTK_TREE_MODEL(self), path, iter);
+	gtk_tree_path_free (path);
 }

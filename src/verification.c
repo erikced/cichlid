@@ -172,7 +172,7 @@ verify_files(gpointer data)
 			}
 
 			/* Create a status update and add it to the list */
-			status_update = status_update_new();
+			status_update = cichlid_status_update_new();
 			status_update->iter = iter;
 
 			if (cichlid_hash_equals(hashfunc, checksum, precalculated_checksum))
@@ -296,7 +296,7 @@ update_file_status(gpointer data)
 			gtk_tree_path_free(filter_path);
 		}
 
-		status_update_free(status_update);
+		cichlid_status_update_free(status_update);
 	}
 	g_mutex_unlock(status_updates_lock);
 	return TRUE;

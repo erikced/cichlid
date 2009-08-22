@@ -23,16 +23,12 @@
 #include <gtk/gtk.h>
 #include <stdint.h>
 
-/* Error Definitions */
-enum
-{
-	CICHLID_ERROR_BADCF
-};
-
 enum
 {
 	CICHLID_CHECKSUM_FILE_FILENAME = 0,
-	CICHLID_CHECKSUM_FILE_STATUS
+	CICHLID_CHECKSUM_FILE_STATUS,
+	CICHLID_CHECKSUM_FILE_GFILE,
+	CICHLID_CHECKSUM_FILE_CHECKSUM
 };
 
 #define CICHLID_TYPE_CHECKSUM_FILE       		(cichlid_checksum_file_get_type ())
@@ -43,22 +39,22 @@ enum
 #define CICHLID_CHECKSUM_FILE_GET_CLASS(obj)	(G_TYPE_INSTANCE_GET_CLASS ((obj), CICHLID_TYPE_CHECKSUM_FILE, CichlidChecksumFileClass))
 
 /* Hash types */
-enum
+typedef enum
 {
   HASH_UNKNOWN = 0,
   HASH_CRC32,
   HASH_MD5,
   HASH_SHA1
-};
+} hash_t;
 
 /* File statuses */
-enum
+typedef enum
 {
   STATUS_BAD = 0,
   STATUS_GOOD,
   STATUS_NOT_FOUND,
   STATUS_NOT_VERIFIED
-};
+} file_status_t;
 
 typedef struct _CichlidChecksumFile        CichlidChecksumFile;
 typedef struct _CichlidChecksumFileClass   CichlidChecksumFileClass;
@@ -67,6 +63,9 @@ struct _CichlidChecksumFile
 {
 	GtkListStore parent_instance;
 
+
+	hash_t cs_type; /* Checksum type (HASH_...) */
+
 	/* Private */
 	GFile   *file;
 	GQueue	*file_queue;
@@ -74,12 +73,12 @@ struct _CichlidChecksumFile
 	gboolean file_parsed;
 
 	/* Checksum Options */
-	char    cs_comment;    /* Character used to prepend comments in the checksum file */
+	char    cs_comment;   /* Character used to prepend comments in the checksum file */
 	uint8_t cs_length;    /* Length of the hash (in hex chars) */
 	uint8_t cs_order;     /* Order of filename / hash */
 	char    cs_separator; /* Character separating the checksum from the filename if checksum_order = CHECKSUM_LAST
 	                         otherwise the number of characters between the checksum and the filename */
-	uint8_t cs_type;
+
 };
 
 struct _CichlidChecksumFileClass
@@ -91,6 +90,7 @@ struct _CichlidChecksumFileClass
 
 GType cichlid_checksum_file_get_type (void);
 
-void                 cichlid_checksum_file_load(CichlidChecksumFile *self, GFile *checksum_file);
-
+void cichlid_checksum_file_load_from_cmd(CichlidChecksumFile *self, const char *filename);
+void cichlid_checksum_file_load(CichlidChecksumFile *self, GFile *checksum_file);
+void cichlid_checksum_file_set(CichlidChecksumFile *self, GtkTreeIter *iter, int column, GValue *value);
 #endif /* CICHLID_CHECKSUM_FILE_H */
