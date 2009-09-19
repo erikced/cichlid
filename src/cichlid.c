@@ -23,6 +23,7 @@
 #include <stdio.h>
 
 #include "cichlid.h"
+#include "cichlid_file.h"
 #include "gui.h"
 #include "cichlid_checksum_file.h"
 #include "cichlid_checksum_file_v.h"
@@ -43,7 +44,6 @@ enum
 GtkTreeModel *files_filter;
 GtkTreeModel *files_sort;
 CichlidChecksumFile *cfile;
-CichlidChecksumFileVerifier *v;
 static guint filter_flags = (1 << STATUS_GOOD) | (1 << STATUS_BAD) | (1 << STATUS_NOT_VERIFIED) | (1 << STATUS_NOT_FOUND);
 
 int hash_type = HASH_UNKNOWN;
@@ -102,7 +102,7 @@ on_file_menu_open_activate(GtkWidget *widget, gpointer user_data)
 void
 on_verify_clicked(GtkWidget *widget, gpointer user_data)
 {
-	cichlid_checksum_file_verifier_start(v, NULL);
+	cichlid_checksum_file_verify(cfile);
 }
 
 /**
@@ -230,8 +230,6 @@ main(int argc, char **argv)
 	/* Initialize the CichlidChecksumFile and the Filter */
 	cfile = g_object_new(CICHLID_TYPE_CHECKSUM_FILE, NULL);
 	g_signal_connect(G_OBJECT(cfile), "file-loaded", G_CALLBACK(on_file_loaded), NULL);
-
-	v = cichlid_checksum_file_verifier_new(cfile);
 
 	files_filter = gtk_tree_model_filter_new(GTK_TREE_MODEL(cfile), NULL);
 	gtk_tree_model_filter_set_visible_func(GTK_TREE_MODEL_FILTER(files_filter), filelist_filter_func, NULL, NULL);

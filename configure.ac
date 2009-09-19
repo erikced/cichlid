@@ -12,8 +12,10 @@ AC_PROG_CC
 AM_PROG_CC_C_O
 
 # Checks for libraries.
-PKG_CHECK_MODULES(GLIB, glib-2.0 gthread-2.0)
-PKG_CHECK_MODULES(UI, gtk+-2.0 >= 2.12 gio-2.0)
+PKG_CHECK_MODULES(GLIB, glib-2.0)
+PKG_CHECK_MODULES(GTHREAD, gthread-2.0)
+PKG_CHECK_MODULES(GTK, gtk+-2.0 >= 2.16)
+PKG_CHECK_MODULES(GIO, gio-2.0)
 
 # Checks for header files.
 AC_CHECK_HEADERS([stdint.h stdlib.h string.h unistd.h])

@@ -5,6 +5,10 @@ bin_PROGRAMS = cichlid
 cichlid_SOURCES = \
 	cichlid.c \
 	cichlid.h \
+	cichlid_file.h \
+	cichlid_file.c \
+	cichlid_cell_renderer.c \
+	cichlid_cell_renderer.h \
 	cichlid_checksum_file.c \
 	cichlid_checksum_file.h \
 	cichlid_checksum_file_v.c \
@@ -21,9 +25,13 @@ cichlid_SOURCES = \
 cichlid_CFLAGS = \
 	-DPKGDATADIR=\""$(pkgdatadir)"\" \
 	$(GLIB_CFLAGS) \
-	$(UI_CFLAGS) \
+	$(GTHREAD_CFLAGS) \
+	$(GTK_CFLAGS) \
+	$(GIO_CFLAGS) \
 	$(AM_CFLAGS)
 
 cichlid_LDADD = \
 	$(GLIB_LIBS) \
-	$(UI_LIBS)
+	$(GTHREAD_LIBS) \
+	$(GTK_LIBS) \
+	$(GIO_LIBS)

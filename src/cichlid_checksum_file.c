@@ -26,8 +26,37 @@
 #include <stdlib.h>
 
 #include "cichlid.h"
+#include "cichlid_file.h"
 #include "cichlid_hash.h"
 #include "cichlid_checksum_file.h"
+#include "cichlid_checksum_file_v.h"
+
+typedef struct _CichlidChecksumFilePrivate CichlidChecksumFilePrivate;
+
+struct _CichlidChecksumFilePrivate
+{
+	CichlidChecksumFileVerifier *verifier;
+	hash_t cs_type; /* Checksum type (HASH_...) */
+
+	/* File stuff */
+	GFile   *file;
+	GQueue	*file_queue;
+	GMutex	*file_queue_lock;
+	gboolean file_parsed;
+
+	/* Checksum Options */
+	char    cs_comment;   /* Character used to prepend comments in the checksum file */
+	uint8_t cs_length;    /* Length of the hash (in hex chars) */
+	uint8_t cs_order;     /* Order of filename / hash */
+	char    cs_separator; /* Character separating the checksum from the filename if checksum_order = CHECKSUM_LAST
+	                         otherwise the number of characters between the checksum and the filename */
+};
+
+/* Properties */
+enum
+{
+	P_HASH = 1
+};
 
 /* Column order */
 enum
@@ -36,6 +65,7 @@ enum
 	STATUS_COLUMN,
 	GFILE_COLUMN,
 	CHECKSUM_COLUMN,
+	FILE_COLUMN,
 	N_COLUMNS
 };
 
@@ -52,18 +82,6 @@ enum
 	CHECKSUM_LAST
 };
 
-/* File */
-typedef struct
-{
-	GFile         *file;
-	char          *name;
-	int            status;
-	gconstpointer  checksum;
-} CichlidFile;
-
-#define cichlid_file_new() g_slice_alloc(sizeof(CichlidFile))
-#define cichlid_file_free(p_file) g_slice_free1(sizeof(CichlidFile),p_file)
-
 /* Parsed line info */
 typedef struct
 {
@@ -75,14 +93,23 @@ typedef struct
 
 static gboolean    cichlid_checksum_file_insert_files(CichlidChecksumFile *self);
 static gboolean	   cichlid_checksum_file_checksum_valid(char *const p_checksum, guint checksum_length);
+static char       *cichlid_checksum_file_get_base_path(GFile *file);
 static GType       cichlid_checksum_file_get_column_type(GtkTreeModel *self, int column);
+static char       *cichlid_checksum_file_get_extension(const char *filename);
 static int         cichlid_checksum_file_get_n_columns(GtkTreeModel *self);
 static void        cichlid_checksum_file_get_value(GtkTreeModel *self, GtkTreeIter *iter, int column, GValue *value);
-static char       *cichlid_checksum_file_get_base_path(GFile *file);
-static char       *cichlid_checksum_file_get_extension(const char *filename);
+static void        cichlid_checksum_file_get_property(GObject    *object,
+		                                              guint       property_id,
+		                                              GValue     *value,
+		                                              GParamSpec *pspec);
 static void        cichlid_checksum_file_parse(CichlidChecksumFile *self);
 static void        cichlid_checksum_file_queue_file(CichlidChecksumFile *self, const char *filename, const char *base_path, gconstpointer checksum);
 static inline void cichlid_checksum_file_read_checksum(CichlidChecksumFile *self, uint32_t *checksum, const char *checksum_start);
+static void        cichlid_checksum_file_set_property(GObject    *object,
+		                                              guint       property_id,
+		                                              GValue     *value,
+		                                              GParamSpec *pspec);
+
 static void        cichlid_checksum_file_set_filetype(CichlidChecksumFile *self, GFile *file, GError **error);
 static void        cichlid_checksum_file_set_filetype_options(CichlidChecksumFile *self, int hash, guint length, int order, char separator, char comment_char);
 static void        gtk_tree_model_interface_init(GtkTreeModelIface* iface);
@@ -92,7 +119,7 @@ static GtkTreeModelIface parent_iface;
 static guint signal_file_loaded = 0;
 
 G_DEFINE_TYPE_WITH_CODE(CichlidChecksumFile, cichlid_checksum_file, GTK_TYPE_LIST_STORE,
-		G_IMPLEMENT_INTERFACE (GTK_TYPE_TREE_MODEL, gtk_tree_model_interface_init))
+		G_IMPLEMENT_INTERFACE (GTK_TYPE_TREE_MODEL, gtk_tree_model_interface_init));
 
 /*
  * Initialize the interface
@@ -112,10 +139,17 @@ static void
 cichlid_checksum_file_dispose(GObject *gobject)
 {
 	CichlidChecksumFile *self = CICHLID_CHECKSUM_FILE(gobject);
+	CichlidChecksumFilePrivate *priv = self->priv;
 
-	g_object_unref(self->file);
-	g_queue_free(self->file_queue);
-	g_mutex_free(self->file_queue_lock);
+	while (!g_queue_is_empty(priv->file_queue))
+	{
+		cichlid_file_free(g_queue_pop_head(priv->file_queue));
+	}
+
+	g_object_unref(priv->verifier);
+	g_object_unref(priv->file);
+	g_queue_free(priv->file_queue);
+	g_mutex_free(priv->file_queue_lock);
 
 	/* Chain up to the parent class */
 	G_OBJECT_CLASS (cichlid_checksum_file_parent_class)->dispose (gobject);
@@ -133,9 +167,21 @@ cichlid_checksum_file_finalize(GObject *gobject)
 static void
 cichlid_checksum_file_class_init(CichlidChecksumFileClass *klass)
 {
-	GObjectClass *gobject_class = G_OBJECT_CLASS (klass);
+	GObjectClass *gobject_class = G_OBJECT_CLASS(klass);
+
+	g_type_class_add_private(klass, sizeof(CichlidChecksumFilePrivate));
+
 	gobject_class->dispose = cichlid_checksum_file_dispose;
 	gobject_class->finalize = cichlid_checksum_file_finalize;
+
+
+	gobject_class->get_property = cichlid_checksum_file_get_property;
+    gobject_class->set_property = cichlid_checksum_file_set_property;
+
+    g_object_class_install_property(gobject_class, P_HASH,
+    		                        g_param_spec_int("hash-type", NULL, "cs_type",
+												     0, INT_MAX, 0,
+    		                        		         G_PARAM_READWRITE));
 
 	signal_file_loaded = g_signal_new ("file-loaded",
 			G_OBJECT_CLASS_TYPE(gobject_class),
@@ -150,18 +196,21 @@ cichlid_checksum_file_class_init(CichlidChecksumFileClass *klass)
 static void
 cichlid_checksum_file_init(CichlidChecksumFile *self)
 {
-
+	CichlidChecksumFilePrivate *priv;
+	priv = self->priv = G_TYPE_INSTANCE_GET_PRIVATE(self, CICHLID_TYPE_CHECKSUM_FILE, CichlidChecksumFilePrivate);
 
 	/* Initiera variabler */
 	GType types[] = { G_TYPE_POINTER };
 	gtk_list_store_set_column_types(GTK_LIST_STORE(self), LS_N_COLUMNS, types);
 
-	self->file_queue = g_queue_new();
-	self->file_queue_lock = g_mutex_new ();
-	self->file_parsed = FALSE;
+	priv->verifier = cichlid_checksum_file_verifier_new(self);
 
-	self->cs_comment = '\0';
-	self->cs_length = 0;
+	priv->file_queue = g_queue_new();
+	priv->file_queue_lock = g_mutex_new ();
+	priv->file_parsed = FALSE;
+
+	priv->cs_comment = '\0';
+	priv->cs_length = 0;
 }
 
 static int
@@ -178,6 +227,7 @@ cichlid_checksum_file_get_column_type(GtkTreeModel *self, int column)
 		G_TYPE_STRING,
 		G_TYPE_INT,
 		G_TYPE_OBJECT,
+		G_TYPE_POINTER,
 		G_TYPE_POINTER
 	};
 
@@ -192,55 +242,70 @@ static CichlidFile *
 cichlid_checksum_file_get_object(CichlidChecksumFile *self, GtkTreeIter *iter)
 {
         GValue value = { 0, };
-        CichlidFile *obj;
+        CichlidFile *ck_file;
 
         /* validate our parameters */
         g_return_val_if_fail(CICHLID_IS_CHECKSUM_FILE(self), NULL);
         g_return_val_if_fail(iter != NULL, NULL);
 
         parent_iface.get_value(GTK_TREE_MODEL (self), iter, 0, &value);
-        obj = g_value_get_pointer(&value);
+        ck_file = g_value_get_pointer(&value);
 
         g_value_unset(&value);
 
-        return obj;
+        return ck_file;
 }
 
 static void
 cichlid_checksum_file_get_value(GtkTreeModel *self, GtkTreeIter *iter, int column, GValue *value)
 {
-        CichlidFile *cf;
+        CichlidFile *ck_file;
 
         g_return_if_fail(CICHLID_IS_CHECKSUM_FILE(self));
         g_return_if_fail(iter != NULL);
         g_return_if_fail(column >= 0 && column < N_COLUMNS);
         g_return_if_fail(value != NULL);
 
-        cf = cichlid_checksum_file_get_object(CICHLID_CHECKSUM_FILE(self), iter);
+        ck_file = cichlid_checksum_file_get_object(CICHLID_CHECKSUM_FILE(self), iter);
 
         g_value_init(value, cichlid_checksum_file_get_column_type(self, column));
 
         switch (column)
         {
         case FILENAME_COLUMN:
-        	g_value_set_string(value, cf->name);
+        	g_value_set_string(value, ck_file->name);
         	break;
-
         case STATUS_COLUMN:
-        	g_value_set_int(value, cf->status);
+        	g_value_set_int(value, ck_file->status);
         	break;
-
         case GFILE_COLUMN:
-        	g_value_set_object(value, cf->file);
+        	g_value_set_object(value, ck_file->file);
         	break;
-
         case CHECKSUM_COLUMN:
-        	g_value_set_pointer(value, (gpointer)cf->checksum);
+        	g_value_set_pointer(value, (gpointer)ck_file->checksum);
         	break;
-
+        case FILE_COLUMN:
+        	g_value_set_pointer(value, ck_file);
+        	break;
         default:
         	g_assert_not_reached();
         }
+}
+
+static void
+cichlid_checksum_file_get_property(GObject *object, guint property_id, GValue *value, GParamSpec *pspec)
+{
+	CichlidChecksumFile        *self = CICHLID_CHECKSUM_FILE(object);
+	CichlidChecksumFilePrivate *priv = self->priv;
+
+	switch(property_id)
+	{
+	case P_HASH:
+		g_value_set_int(value, priv->cs_type);
+		break;
+	default:
+		G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
+	}
 }
 
 void
@@ -262,8 +327,10 @@ cichlid_checksum_file_load(CichlidChecksumFile *self, GFile *checksum_file)
     g_return_if_fail(CICHLID_IS_CHECKSUM_FILE(self));
 	g_return_if_fail(checksum_file != NULL);
 
+	CichlidChecksumFilePrivate *priv = self->priv;
+
 	g_object_ref(checksum_file);
-	self->file = checksum_file;
+	priv->file = checksum_file;
 
 	cichlid_checksum_file_set_filetype(self, checksum_file, &error);
 
@@ -354,11 +421,29 @@ cichlid_checksum_file_set_filetype_options(CichlidChecksumFile *self, int hash, 
 {
 	g_return_if_fail(CICHLID_IS_CHECKSUM_FILE(self));
 
-	self->cs_type = hash;
-	self->cs_length = length;
-	self->cs_order = order;
-	self->cs_separator = separator;
-	self->cs_comment = comment_char;
+	CichlidChecksumFilePrivate *priv = self->priv;
+
+	priv->cs_type = hash;
+	priv->cs_length = length;
+	priv->cs_order = order;
+	priv->cs_separator = separator;
+	priv->cs_comment = comment_char;
+}
+
+static void
+cichlid_checksum_file_set_property(GObject *object, guint property_id, GValue *value, GParamSpec *pspec)
+{
+	CichlidChecksumFile        *self = CICHLID_CHECKSUM_FILE(object);
+	CichlidChecksumFilePrivate *priv = self->priv;
+
+	switch(property_id)
+	{
+	case P_HASH:
+		priv->cs_type = g_value_get_int(value);
+		break;
+	default:
+		G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
+	}
 }
 
 /**
@@ -421,12 +506,13 @@ cichlid_checksum_file_parse(CichlidChecksumFile *self)
 
 	g_return_if_fail(CICHLID_IS_CHECKSUM_FILE(self));
 
-	GFile *checksum_file = self->file;
+	CichlidChecksumFilePrivate *priv = self->priv;
+	GFile *checksum_file = priv->file;
 	g_assert(checksum_file != NULL);
 
-	self->file_parsed = FALSE;
+	priv->file_parsed = FALSE;
 
-	if (self->cs_type == HASH_UNKNOWN)
+	if (priv->cs_type == HASH_UNKNOWN)
 		return;
 
 	filestream = g_file_read(checksum_file, NULL, error);
@@ -434,7 +520,6 @@ cichlid_checksum_file_parse(CichlidChecksumFile *self)
 
 	base_path = cichlid_checksum_file_get_base_path(checksum_file);
 
-	uint32_t i = 0;
 	/* For each line in the file */
 	while (1)
 	{
@@ -446,8 +531,8 @@ cichlid_checksum_file_parse(CichlidChecksumFile *self)
 
 		/* If the number of read chars is too short, the line begins with a comment
 		 * or a newline, skip it. */
-		if (line_length < self->cs_length + 2 ||
-				*read_line == self->cs_comment ||
+		if (line_length < priv->cs_length + 2 ||
+				*read_line == priv->cs_comment ||
 				*read_line == '\n' ||
 				*read_line == '\r')
 		{
@@ -456,7 +541,7 @@ cichlid_checksum_file_parse(CichlidChecksumFile *self)
 		}
 
 		/* Find start of the checksum if the checksum is last */
-		if (self->cs_order == CHECKSUM_LAST)
+		if (priv->cs_order == CHECKSUM_LAST)
 		{
 			checksum_start = strrchr(read_line,' ') + 1;
 			filename_start = read_line;
@@ -465,15 +550,15 @@ cichlid_checksum_file_parse(CichlidChecksumFile *self)
 		else
 		{
 			checksum_start = read_line;
-			filename_start = read_line + self->cs_length + self->cs_separator;
-			filename_length = MAX(line_length - self->cs_length - self->cs_separator, 0);
+			filename_start = read_line + priv->cs_length + priv->cs_separator;
+			filename_length = MAX(line_length - priv->cs_length - priv->cs_separator, 0);
 		}
 
 		/* Make sure the checksum is valid (only hex chars, correct length) */
 		if (checksum_start == NULL ||
 				filename_length == 0 ||
-				line_length - (checksum_start - read_line) < self->cs_length ||
-				!cichlid_checksum_file_checksum_valid(checksum_start, self->cs_length))
+				line_length - (checksum_start - read_line) < priv->cs_length ||
+				!cichlid_checksum_file_checksum_valid(checksum_start, priv->cs_length))
 		{
 			g_free(read_line);
 			continue;
@@ -485,7 +570,7 @@ cichlid_checksum_file_parse(CichlidChecksumFile *self)
 		filename[filename_length] = '\0';
 
 		/* Do the same for the checksum */
-		checksum = g_malloc(sizeof(char)*self->cs_length/2);
+		checksum = g_malloc(sizeof(char)*priv->cs_length/2);
 		cichlid_checksum_file_read_checksum(self, checksum, checksum_start);
 
 		/* Add the file to the list */
@@ -503,7 +588,7 @@ cichlid_checksum_file_parse(CichlidChecksumFile *self)
 	if (*error != NULL)
 		g_error_free(*error);
 
-	self->file_parsed = TRUE;
+	priv->file_parsed = TRUE;
 
 	g_free(base_path);
 	g_object_unref(datastream);
@@ -517,10 +602,11 @@ static inline void
 cichlid_checksum_file_read_checksum(CichlidChecksumFile *self, uint32_t *checksum, const char *checksum_start)
 {
 	g_return_if_fail(CICHLID_IS_CHECKSUM_FILE(self));
-
+	CichlidChecksumFilePrivate *priv = self->priv;
 	char num[9];
+
 	num[8] = '\0';
-	for (int i = 0; i < self->cs_length/8; i++)
+	for (int i = 0; i < priv->cs_length/8; i++)
 	{
 		memcpy(num, checksum_start + 8*i, 8);
 		checksum[i] = strtoul(num, NULL, 16);
@@ -534,9 +620,11 @@ static void
 cichlid_checksum_file_queue_file(CichlidChecksumFile *self, const char *filename, const char *base_path, gconstpointer checksum)
 {
 	GFile *file;
+	GFile *folder;
 	GFileInfo *info;
 	CichlidFile *f;
-	const char *name = NULL;
+	char *name;
+	char *rel_path;
 	char *file_path;
 	int status;
 
@@ -545,37 +633,28 @@ cichlid_checksum_file_queue_file(CichlidChecksumFile *self, const char *filename
 	g_return_if_fail(base_path != NULL);
 	g_return_if_fail(checksum != NULL);
 
+	CichlidChecksumFilePrivate *priv = self->priv;
 
 	file_path = g_strconcat(base_path,G_DIR_SEPARATOR_S,filename,NULL);
-
 	file = g_file_new_for_commandline_arg(file_path);
+	folder = g_file_get_parent(priv->file);
+	rel_path = g_file_get_relative_path(folder, file);
+	name = g_filename_to_utf8(rel_path, -1, NULL, NULL, NULL);
 
-	/* Get the filename */
-	info = g_file_query_info(file,G_FILE_ATTRIBUTE_STANDARD_DISPLAY_NAME,0,NULL,NULL);
-	if (info != NULL)
-		name = g_file_info_get_attribute_string(info,G_FILE_ATTRIBUTE_STANDARD_DISPLAY_NAME);
-
-	if (name == NULL)
-	{
-		name = filename;
-		status = STATUS_NOT_FOUND;
-	}
-	else
-		status = STATUS_NOT_VERIFIED;
+	status = STATUS_NOT_VERIFIED;
 
 	f = cichlid_file_new();
 	f->file = file;
-	f->name = g_strdup(name);
+	f->name = name;
 	f->status = status;
 	f->checksum = checksum;
 
-	g_mutex_lock(self->file_queue_lock);
-	g_queue_push_tail(self->file_queue, f);
-	g_mutex_unlock(self->file_queue_lock);
+	g_mutex_lock(priv->file_queue_lock);
+	g_queue_push_tail(priv->file_queue, f);
+	g_mutex_unlock(priv->file_queue_lock);
 
-	if (info != NULL)
-		g_object_unref(info);
-	g_free(file_path);
+	g_object_unref(folder);
+	g_free(rel_path);
 }
 
 static gboolean
@@ -585,16 +664,18 @@ cichlid_checksum_file_insert_files(CichlidChecksumFile *self)
 
 	g_return_val_if_fail(CICHLID_IS_CHECKSUM_FILE(self), FALSE);
 
-	g_mutex_lock(self->file_queue_lock);
-	while (i < 100 && !g_queue_is_empty(self->file_queue))
+	CichlidChecksumFilePrivate *priv = self->priv;
+
+	g_mutex_lock(priv->file_queue_lock);
+	while (i < 100 && !g_queue_is_empty(priv->file_queue))
 	{
-		gtk_list_store_insert_with_values(GTK_LIST_STORE(self), NULL, G_MAXINT, LS_FILE_COLUMN, g_queue_pop_head(self->file_queue), -1);
+		gtk_list_store_insert_with_values(GTK_LIST_STORE(self), NULL, G_MAXINT, LS_FILE_COLUMN, g_queue_pop_head(priv->file_queue), -1);
 		++i;
 	}
-	g_mutex_unlock(self->file_queue_lock);
+	g_mutex_unlock(priv->file_queue_lock);
 
 	/* All queued files are added and the file is completely parsed */
-	if (self->file_parsed && g_queue_is_empty(self->file_queue))
+	if (priv->file_parsed && g_queue_is_empty(priv->file_queue))
 	{
 		g_signal_emit(G_OBJECT (self), signal_file_loaded, 0);
 		return FALSE;
@@ -640,4 +721,12 @@ cichlid_checksum_file_set(CichlidChecksumFile *self, GtkTreeIter *iter, int colu
 	path = gtk_tree_model_get_path(GTK_TREE_MODEL(self), iter);
 	gtk_tree_model_row_changed(GTK_TREE_MODEL(self), path, iter);
 	gtk_tree_path_free (path);
+}
+
+void cichlid_checksum_file_verify(CichlidChecksumFile *self)
+{
+	g_return_if_fail(CICHLID_IS_CHECKSUM_FILE(self));
+
+	CichlidChecksumFilePrivate *priv = self->priv;
+	cichlid_checksum_file_verifier_start(priv->verifier, NULL);
 }

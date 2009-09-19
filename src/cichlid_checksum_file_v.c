@@ -24,6 +24,7 @@
 #include <unistd.h>
 
 #include "cichlid.h"
+#include "cichlid_file.h"
 #include "cichlid_hash.h"
 #include "cichlid_hash_crc32.h"
 #include "cichlid_hash_md5.h"
@@ -42,6 +43,7 @@ typedef struct
 #define cichlid_status_update_free(p_status_update) g_slice_free1(sizeof(StatusUpdate),p_status_update)
 
 
+static void     cichlid_checksum_file_verifier_parent_finalized(CichlidChecksumFileVerifier *self, GObject *parent_address);
 static void     cichlid_checksum_file_verifier_verify(CichlidChecksumFileVerifier *self);
 static gboolean cichlid_checksum_file_verifier_update_status(CichlidChecksumFileVerifier *self);
 
@@ -58,7 +60,7 @@ cichlid_checksum_file_verifier_dispose(GObject *gobject)
 	g_mutex_free(self->status_update_lock);
 
 	/* Chain up to the parent class */
-	G_OBJECT_CLASS (cichlid_checksum_file_verifier_parent_class)->dispose(gobject);
+	G_OBJECT_CLASS(cichlid_checksum_file_verifier_parent_class)->dispose(gobject);
 }
 
 static void
@@ -66,7 +68,7 @@ cichlid_checksum_file_verifier_finalize(GObject *gobject)
 {
 	CichlidChecksumFileVerifier *self = CICHLID_CHECKSUM_FILE_VERIFIER(gobject);
 
-	G_OBJECT_CLASS (cichlid_checksum_file_verifier_parent_class)->finalize(gobject);
+	G_OBJECT_CLASS(cichlid_checksum_file_verifier_parent_class)->finalize(gobject);
 }
 
 
@@ -99,10 +101,18 @@ cichlid_checksum_file_verifier_new(CichlidChecksumFile *checksum_file)
 {
 	CichlidChecksumFileVerifier *obj;
 	obj = g_object_new(CICHLID_TYPE_CHECKSUM_FILE_VERIFIER, NULL);
-	g_object_ref(checksum_file);
+	g_object_weak_ref(G_OBJECT(checksum_file), (GWeakNotify)cichlid_checksum_file_verifier_parent_finalized, obj);
 	obj->checksum_file = checksum_file;
 
 	return obj;
+}
+
+static void
+cichlid_checksum_file_verifier_parent_finalized(CichlidChecksumFileVerifier *self, GObject *parent_address)
+{
+	g_return_if_fail(CICHLID_IS_CHECKSUM_FILE_VERIFIER(self));
+
+	g_object_unref(self);
 }
 
 gboolean
@@ -111,15 +121,19 @@ cichlid_checksum_file_verifier_start(CichlidChecksumFileVerifier *self, GError *
 	GtkTreeIter iter;
 	GFile* file;
 	GFileInfo* info;
+	hash_t cs_type;
+
 
 	g_return_val_if_fail(CICHLID_IS_CHECKSUM_FILE_VERIFIER(self), FALSE);
 	g_return_val_if_fail(error == NULL || *error == NULL, FALSE);
 	g_return_val_if_fail(!self->active, FALSE);
 	g_return_val_if_fail(self->checksum_file != NULL, FALSE);
 
-	if (self->checksum_file->cs_type == HASH_UNKNOWN)
+	g_object_get(self->checksum_file, "hash-type", &cs_type, NULL);
+
+	if (cs_type == HASH_UNKNOWN)
 	{
-		g_set_error(error, g_quark_from_string("cichlid"), CICHLID_ERROR_UNKNOWN_HASH, "A file with an unknown hash type cannot be verified.");
+		g_set_error(error, g_quark_from_string("cichlid"), CICHLID_ERROR_UNKNOWN_HASH, "The hash type cannot be unknown.");
 		return FALSE;
 	}
 
@@ -167,15 +181,17 @@ cichlid_checksum_file_verifier_verify(CichlidChecksumFileVerifier *self)
 	StatusUpdate     *status_update;
 	char             *buf;
 	char             *filename;
+	hash_t			  cs_type;
 	uint32_t         *checksum;
 	uint32_t         *precalculated_checksum;
 	gboolean         *started;
 	ssize_t           bytes_read;
 
 	g_return_if_fail(CICHLID_IS_CHECKSUM_FILE_VERIFIER(self));
-	g_return_if_fail(self->checksum_file->cs_type != HASH_UNKNOWN);
 
-	switch (self->checksum_file->cs_type)
+	g_object_get(self->checksum_file, "hash-type", &cs_type, NULL);
+
+	switch (cs_type)
 	{
 	case HASH_CRC32:
 		hashfunc = cichlid_hash_crc32_new();
@@ -201,13 +217,6 @@ cichlid_checksum_file_verifier_verify(CichlidChecksumFileVerifier *self)
 					CICHLID_CHECKSUM_FILE_GFILE, &file,
 					CICHLID_CHECKSUM_FILE_CHECKSUM, &precalculated_checksum, -1);
 
-			/* Update the verification status */
-//			g_mutex_lock(progress_update_lock);
-//			++self->current_file_num;
-//			if (self->current_file)
-//				g_free(self->current_file);
-//			self->current_file = filename;
-//			g_mutex_unlock(progress_update_lock);
 			filestream = g_file_read(file, NULL, &error);
 
 			/* Calculate the checksum */
@@ -261,12 +270,13 @@ cichlid_checksum_file_verifier_verify(CichlidChecksumFileVerifier *self)
 			if (g_atomic_int_get(&self->abort))
 				break;
 		}
-		while(gtk_tree_model_iter_next(GTK_TREE_MODEL(self->checksum_file),&iter));
+		while(gtk_tree_model_iter_next(GTK_TREE_MODEL(self->checksum_file), &iter));
 
 		g_free(buf);
 		g_object_unref(hashfunc);
 	}
 
+	self->active = FALSE;
 	/* Verification Complete signal */
 	g_signal_emit(G_OBJECT (self), signal_verification_complete, 0);
 }

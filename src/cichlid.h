@@ -19,6 +19,8 @@
 #ifndef CICHLID_H
 #define CICHLID_H
 
+#include <gtk/gtk.h>
+
 /* Error Definitions */
 enum
 {
