@@ -23,13 +23,9 @@
 #include <stdio.h>
 
 #include "cichlid.h"
+#include "cichlid_main_window.h"
 #include "cichlid_file.h"
-#include "gui.h"
 #include "cichlid_checksum_file.h"
-#include "cichlid_checksum_file_v.h"
-
-#include "cichlid_hash.h"
-#include "cichlid_hash_md5.h"
 
 enum
 {
@@ -77,7 +73,7 @@ on_file_menu_open_activate(GtkWidget *widget, gpointer user_data)
 	gtk_file_filter_add_pattern(filter, "MD5SUMS");
 
 	filechooser = gtk_file_chooser_dialog_new ("Open File",
-											   GTK_WINDOW(main_window),
+											   GTK_WINDOW(cichlid_main_window_get_window()),
 											   GTK_FILE_CHOOSER_ACTION_OPEN,
 											   GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
 											   GTK_STOCK_OPEN, GTK_RESPONSE_ACCEPT,
@@ -122,9 +118,9 @@ on_filter_changed(GtkWidget *cb_filter, gpointer user_data)
 			filter_flags = (1 << STATUS_NOT_FOUND);
 			break;
 	}
-	ck_main_window_treeview_enable(FALSE);
+	cichlid_main_window_show_filelist(FALSE);
 	gtk_tree_model_filter_refilter(GTK_TREE_MODEL_FILTER(files_filter));
-	ck_main_window_treeview_enable(TRUE);
+	cichlid_main_window_show_filelist(TRUE);
 }
 
 /**
@@ -233,10 +229,10 @@ main(int argc, char **argv)
 		cichlid_checksum_file_load_from_cmd(cfile, filename);
 
 	/* Build the UI */
-	ck_main_window_new(GTK_TREE_MODEL(files_filter),&error);
+	cichlid_main_window_new(GTK_TREE_MODEL(files_filter), &error);
 	if (error == NULL)
 	{
-		gtk_widget_show(main_window);
+		gtk_widget_show(cichlid_main_window_get_window());
 		gtk_main();
 	}
 	else
