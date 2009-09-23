@@ -164,12 +164,15 @@ cichlid_hash_md5_update(CichlidHash *object, const char *data, size_t data_size)
 {
 	CichlidHashMd5 *self;
 	char *buf = NULL;
-	guint new_data_left_size;
+	uint8_t new_data_left_size;
 
 	self = CICHLID_HASH_MD5(object);
 
 	if (self->hash_computed)
 		cichlid_hash_md5_init(self);
+
+	if (!data_size)
+		return;
 
 	self->total_size += data_size;
 

@@ -174,6 +174,9 @@ static void cichlid_hash_crc32_update(CichlidHash *object, const char *data, siz
 	if (self->hash_computed)
 		cichlid_hash_crc32_init(self);
 
+	if (!data_size)
+		return;
+
 	for(cur_char = data; data_size-- > 0; ++cur_char)
 		self->hash = (self->hash >> 8) ^ crc_lookup_table[(self->hash ^ *cur_char) & 0xFF];
 }

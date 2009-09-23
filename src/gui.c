@@ -43,6 +43,7 @@ static GtkWidget *progress;
 
 static void ck_main_window_treeview_init(GtkTreeModel *model);
 static void on_about_activate();
+static void on_verify_clicked();
 
 void
 ck_gui_allow_actions(gboolean allow)
@@ -98,6 +99,21 @@ ck_main_window_new(GtkTreeModel *model, GError **error)
 	return TRUE;
 }
 
+static void
+ck_main_window_treeview_render_status_text(GtkTreeViewColumn *column, GtkCellRenderer *renderer, GtkTreeModel *model, GtkTreeIter *iter, gpointer data)
+{
+	GValue value = { 0, };
+	CichlidFile *ck_file;
+	char *status;
+
+	gtk_tree_model_get_value(model, iter, CICHLID_CHECKSUM_FILE_FILE, &value);
+	ck_file = g_value_get_object(&value);
+	g_value_unset(&value);
+
+	status = cichlid_file_get_status_string(ck_file);
+	g_object_set(renderer, "text", status, NULL);
+}
+
 /**
  * Initializes the tree view listing the files, uses the 'files' ListStore as a model
  * @param a tree view to be initialized
@@ -109,15 +125,16 @@ ck_main_window_treeview_init(GtkTreeModel *model)
 	GtkTreeViewColumn *column;
 
 	/* Filename column */
-	renderer = cichlid_cell_renderer_new();
-	column = gtk_tree_view_column_new_with_attributes(C_("Computer file","File"), renderer, "file", CICHLID_CHECKSUM_FILE_FILE,  NULL);
-	//gtk_tree_view_column_set_sort_column_id(column, NAME);
+	//renderer = cichlid_cell_renderer_new();
+	//column = gtk_tree_view_column_new_with_attributes(C_("Computer file","File"), renderer, "file", CICHLID_CHECKSUM_FILE_FILE,  NULL);
+	renderer = gtk_cell_renderer_text_new();
+	column = gtk_tree_view_column_new_with_attributes(C_("Computer file","File"), renderer, "text", CICHLID_CHECKSUM_FILE_FILENAME, NULL);
 	gtk_tree_view_append_column(GTK_TREE_VIEW(filelist), column);
 
 	/* Status column */
 	renderer = gtk_cell_renderer_text_new();
-	column = gtk_tree_view_column_new_with_attributes(_("Status"),renderer, NULL);
-	gtk_tree_view_column_set_cell_data_func(column, renderer, render_status_text, NULL, NULL);
+	column = gtk_tree_view_column_new_with_attributes(_("Status"), renderer, NULL);
+	gtk_tree_view_column_set_cell_data_func(column, renderer, ck_main_window_treeview_render_status_text, NULL, NULL);
 	gtk_tree_view_append_column(GTK_TREE_VIEW(filelist), column);
 
 	gtk_tree_view_set_model(GTK_TREE_VIEW(filelist), model);
@@ -145,4 +162,19 @@ on_about_activate()
 	                      "title", _("About cichlid"),
 	                      "copyright", "Copyright \xc2\xa9 2009 Erik Cederberg",
 	                      NULL);
+}
+
+static void
+on_verification_progress_updated(double _progress)
+{
+	gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(progress), _progress);
+}
+
+static void
+on_verify_clicked()
+{
+	CichlidChecksumFile *cfile = CICHLID_CHECKSUM_FILE(gtk_tree_model_filter_get_model(GTK_TREE_MODEL_FILTER(gtk_tree_view_get_model(GTK_TREE_VIEW(filelist)))));
+	g_signal_connect(G_OBJECT(cfile),"verification-progress-update", G_CALLBACK(on_verification_progress_updated),NULL);
+	g_object_set(progress, "visible", TRUE, NULL);
+	cichlid_checksum_file_verify(cfile);
 }

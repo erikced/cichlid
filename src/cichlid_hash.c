@@ -84,9 +84,6 @@ cichlid_hash_update (CichlidHash *self, const char *data, size_t data_size)
 {
 	g_return_if_fail (CICHLID_IS_HASH(self));
 
-	if (data_size == 0)
-		return;
-
 	CICHLID_HASH_GET_INTERFACE (self)->update (self, data, data_size);
 }
 

@@ -63,6 +63,7 @@ struct _CichlidChecksumFileClass
 	GtkListStoreClass parent_class;
 
 	void (* file_loaded) (CichlidChecksumFile *checksum_file);
+	void (* verification_progress_update) (CichlidChecksumFile *checksum_file);
 };
 
 GType cichlid_checksum_file_get_type(void);

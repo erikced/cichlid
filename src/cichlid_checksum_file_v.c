@@ -37,7 +37,7 @@ typedef struct
 } StatusUpdate;
 
 #define BUFFER_SIZE 1024*512
-#define STATUS_UPDATE_INTERVAL 125 /* Milliseconds */
+#define PROGRESS_UPDATE_INTERVAL 250
 /* Macros for creating and freeing status updates */
 #define cichlid_status_update_new() g_slice_alloc(sizeof(StatusUpdate))
 #define cichlid_status_update_free(p_status_update) g_slice_free1(sizeof(StatusUpdate),p_status_update)
@@ -45,9 +45,11 @@ typedef struct
 
 static void     cichlid_checksum_file_verifier_parent_finalized(CichlidChecksumFileVerifier *self, GObject *parent_address);
 static void     cichlid_checksum_file_verifier_verify(CichlidChecksumFileVerifier *self);
+static gboolean cichlid_checksum_file_verifier_update_progress(CichlidChecksumFileVerifier *self);
 static gboolean cichlid_checksum_file_verifier_update_status(CichlidChecksumFileVerifier *self);
 
-static guint signal_verification_complete = 0;
+static unsigned int signal_verification_complete = 0;
+static unsigned int signal_progress_update = 0;
 
 G_DEFINE_TYPE(CichlidChecksumFileVerifier, cichlid_checksum_file_verifier, G_TYPE_OBJECT);
 
@@ -80,12 +82,21 @@ cichlid_checksum_file_verifier_class_init(CichlidChecksumFileVerifierClass *klas
 	gobject_class->finalize = cichlid_checksum_file_verifier_finalize;
 
 	signal_verification_complete = g_signal_new("verification-complete",
-			G_OBJECT_CLASS_TYPE(gobject_class),
+			G_TYPE_FROM_CLASS(gobject_class),
 			G_SIGNAL_RUN_LAST,
 			G_STRUCT_OFFSET(CichlidChecksumFileVerifierClass, verification_complete),
 			NULL, NULL,
 			g_cclosure_marshal_VOID__VOID,
 			G_TYPE_NONE, 0);
+
+	signal_progress_update = g_signal_new("progress-update",
+			G_TYPE_FROM_CLASS(gobject_class),
+			G_SIGNAL_RUN_LAST,
+			G_STRUCT_OFFSET(CichlidChecksumFileVerifierClass, progress_update),
+			NULL, NULL,
+			g_cclosure_marshal_VOID__DOUBLE,
+			G_TYPE_NONE, 1,
+			G_TYPE_DOUBLE);
 }
 
 static void
@@ -94,6 +105,14 @@ cichlid_checksum_file_verifier_init(CichlidChecksumFileVerifier *self)
 	/* Initiera variabler */
 	self->status_update_lock = g_mutex_new();
 	self->status_update_queued = FALSE;
+
+	self->active = FALSE;
+	self->current_file = NULL;
+	self->current_file_num = 0;
+	self->total_file_num = 0;
+	self->total_file_size = 0;
+	self->verified_file_size = 0;
+
 }
 
 CichlidChecksumFileVerifier *
@@ -123,7 +142,6 @@ cichlid_checksum_file_verifier_start(CichlidChecksumFileVerifier *self, GError *
 	GFileInfo* info;
 	hash_t cs_type;
 
-
 	g_return_val_if_fail(CICHLID_IS_CHECKSUM_FILE_VERIFIER(self), FALSE);
 	g_return_val_if_fail(error == NULL || *error == NULL, FALSE);
 	g_return_val_if_fail(!self->active, FALSE);
@@ -138,6 +156,11 @@ cichlid_checksum_file_verifier_start(CichlidChecksumFileVerifier *self, GError *
 	}
 
 	self->active = TRUE;
+	self->current_file = NULL;
+	self->current_file_num = 0;
+	self->total_file_num = 0;
+	self->total_file_size = 0;
+	self->verified_file_size = 0;
 
 	/* Calculate the number of files and their total size
 	 * Size might end up negative on a 32bit system if total file size > ~2TB */
@@ -160,12 +183,20 @@ cichlid_checksum_file_verifier_start(CichlidChecksumFileVerifier *self, GError *
 
 	/* If there are no files to verify */
 	if (self->total_file_size == 0)
+	{
+		self->active = FALSE;
 		return FALSE;
+	}
 
-//	status_updates_lock = g_mutex_new();
-//	progress_update_lock = g_mutex_new();
+	/* Create the verification thread */
+#ifdef NO_THREADS
+	cichlid_checksum_file_verifier_verify(self);
+#else
 	g_thread_create((GThreadFunc)cichlid_checksum_file_verifier_verify, self, FALSE, NULL);
-//	timeout_id = g_timeout_add(STATUS_UPDATE_INTERVAL,(GSourceFunc)update_file_status,NULL);
+#endif
+
+	/* Create the progress update timeout */
+	g_timeout_add(PROGRESS_UPDATE_INTERVAL, (GSourceFunc)cichlid_checksum_file_verifier_update_progress, self);
 
 	return TRUE;
 }
@@ -184,7 +215,6 @@ cichlid_checksum_file_verifier_verify(CichlidChecksumFileVerifier *self)
 	hash_t			  cs_type;
 	uint32_t         *checksum;
 	uint32_t         *precalculated_checksum;
-	gboolean         *started;
 	ssize_t           bytes_read;
 
 	g_return_if_fail(CICHLID_IS_CHECKSUM_FILE_VERIFIER(self));
@@ -208,7 +238,6 @@ cichlid_checksum_file_verifier_verify(CichlidChecksumFileVerifier *self)
 	/* If the ListStore is not empty, iterate over it and verify the files */
 	if (gtk_tree_model_get_iter_first(GTK_TREE_MODEL(self->checksum_file), &iter))
 	{
-		self->current_file = NULL;
 		do
 		{
 			/* Get the filename */
@@ -224,7 +253,7 @@ cichlid_checksum_file_verifier_verify(CichlidChecksumFileVerifier *self)
 			{
 				do
 				{
-					bytes_read = g_input_stream_read (G_INPUT_STREAM(filestream), buf, BUFFER_SIZE, NULL, &error);
+					bytes_read = g_input_stream_read(G_INPUT_STREAM(filestream), buf, BUFFER_SIZE, NULL, &error);
 					cichlid_hash_update(hashfunc, buf, bytes_read);
 					g_atomic_int_add(&self->verified_file_size, (bytes_read >> 10));
 				}
@@ -248,8 +277,13 @@ cichlid_checksum_file_verifier_verify(CichlidChecksumFileVerifier *self)
 
 			g_mutex_lock(self->status_update_lock);
 			self->status_updates = g_list_prepend(self->status_updates,status_update);
+
+#ifdef NO_THREADS
+			cichlid_checksum_file_verifier_update_status(self);
+#else
 			if (!self->status_update_queued)
 				g_idle_add((GSourceFunc)cichlid_checksum_file_verifier_update_status, self);
+#endif
 			g_mutex_unlock(self->status_update_lock);
 
 			/* Clean up */
@@ -276,14 +310,30 @@ cichlid_checksum_file_verifier_verify(CichlidChecksumFileVerifier *self)
 		g_object_unref(hashfunc);
 	}
 
+	/* Reset internal variables */
 	self->active = FALSE;
 	/* Verification Complete signal */
-	g_signal_emit(G_OBJECT (self), signal_verification_complete, 0);
+	g_signal_emit(G_OBJECT(self), signal_verification_complete, 0);
+}
+
+static gboolean
+cichlid_checksum_file_verifier_update_progress(CichlidChecksumFileVerifier *self)
+{
+	g_return_val_if_fail(CICHLID_IS_CHECKSUM_FILE_VERIFIER(self), FALSE);
+
+	double progress;
+
+	progress = g_atomic_int_get(&self->verified_file_size) / (double)self->total_file_size ;
+	g_signal_emit(G_OBJECT(self), signal_progress_update, 0, progress);
+
+	return 1-(int)progress;
 }
 
 static gboolean
 cichlid_checksum_file_verifier_update_status(CichlidChecksumFileVerifier *self)
 {
+	g_return_val_if_fail(CICHLID_IS_CHECKSUM_FILE_VERIFIER(self), FALSE);
+
 	GValue value = {0, };
 	StatusUpdate *status_update;
 	gboolean	 queue;
@@ -307,3 +357,4 @@ cichlid_checksum_file_verifier_update_status(CichlidChecksumFileVerifier *self)
 	g_mutex_unlock(self->status_update_lock);
 	return queue;
 }
+

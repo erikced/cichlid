@@ -60,6 +60,7 @@ struct _CichlidChecksumFileVerifierClass
   GObjectClass parent_class;
 
   void (* verification_complete) (CichlidChecksumFileVerifier *ver);
+  void (* progress_update) (CichlidChecksumFileVerifier *ver);
 };
 
 #endif /* CICHLID_CHECKSUM_FILE_VERIFIER_H */

@@ -99,12 +99,6 @@ on_file_menu_open_activate(GtkWidget *widget, gpointer user_data)
 	}
 }
 
-void
-on_verify_clicked(GtkWidget *widget, gpointer user_data)
-{
-	cichlid_checksum_file_verify(cfile);
-}
-
 /**
  * Changes the filter parameter and updates the filter
  */
