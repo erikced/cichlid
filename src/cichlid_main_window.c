@@ -47,17 +47,12 @@ static void filelist_render_status_text(GtkTreeViewColumn *column,
 										GtkTreeModel *model,
 										GtkTreeIter *iter,
 										gpointer data);
+static CichlidChecksumFile *get_checksum_file();
 static void on_about_activate();
 static void on_verify_clicked();
+static void on_verification_complete();
+static void on_verification_progress_updated();
 static void on_main_window_destroyed();
-
-void
-ck_gui_allow_actions(gboolean allow)
-{
-	gtk_widget_set_sensitive(btn_verify, allow);
-	gtk_widget_set_sensitive(cb_filter, allow);
-	gtk_widget_set_sensitive(file_menu_open, allow);
-}
 
 GtkWidget *cichlid_main_window_get_window()
 {
@@ -102,7 +97,6 @@ cichlid_main_window_new(GtkTreeModel *model,
 	cb_filter = GTK_WIDGET(gtk_builder_get_object(WindowBuilder,"cb_filter"));
 	g_signal_connect(G_OBJECT(cb_filter), "changed", G_CALLBACK(on_filter_changed), NULL);
 	
-
 	/* Verify button */
 	btn_verify = GTK_WIDGET(gtk_builder_get_object(WindowBuilder,"btn_verify"));
 	g_signal_connect(G_OBJECT(btn_verify), "clicked", G_CALLBACK(on_verify_clicked), NULL);
@@ -159,6 +153,14 @@ filelist_init(GtkTreeModel *model)
 	gtk_tree_view_set_model(GTK_TREE_VIEW(filelist), model);
 }
 
+static CichlidChecksumFile *
+get_checksum_file()
+{
+	return CICHLID_CHECKSUM_FILE(gtk_tree_model_filter_get_model
+								 (GTK_TREE_MODEL_FILTER(gtk_tree_view_get_model
+														(GTK_TREE_VIEW(filelist)))));
+}
+
 static void
 filelist_render_status_text(GtkTreeViewColumn *column,
 							GtkCellRenderer *renderer,
@@ -173,17 +175,20 @@ filelist_render_status_text(GtkTreeViewColumn *column,
 	gtk_tree_model_get_value(model, iter, CICHLID_CHECKSUM_FILE_FILE, &value);
 	ck_file = g_value_get_object(&value);
 	g_value_unset(&value);
-	
+
 	status = cichlid_file_get_status_string(ck_file);
-	g_object_set(renderer, "text", status, NULL);
+	if (ck_file->status == STATUS_BAD)
+		g_object_set(renderer, "text", status, "foreground", "red", NULL);
+	else
+		g_object_set(renderer, "text", status, "foreground", NULL, NULL);
 }
 
 static void
 on_about_activate()
 {
 	gtk_show_about_dialog(GTK_WINDOW(main_window),
-	                      "program-name", "cichlid",
-	                      "title", _("About cichlid"),
+	                      "program-name", "Cichlid",
+	                      "title", _("About Cichlid"),
 	                      "copyright", "Copyright \xc2\xa9 2009 Erik Cederberg",
 	                      NULL);
 }
@@ -205,14 +210,22 @@ static void
 on_verification_complete()
 {
 	g_object_set(progress, "visible", FALSE, NULL);
+	gtk_widget_set_sensitive(file_menu_open, TRUE);
+	gtk_widget_set_sensitive(btn_verify, TRUE);
 }
 
 static void
 on_verify_clicked()
 {
-	CichlidChecksumFile *cfile = CICHLID_CHECKSUM_FILE(gtk_tree_model_filter_get_model(GTK_TREE_MODEL_FILTER(gtk_tree_view_get_model(GTK_TREE_VIEW(filelist)))));
+	CichlidChecksumFile *cfile = get_checksum_file();
+	
+	gtk_widget_set_sensitive(btn_verify, FALSE);
+	gtk_widget_set_sensitive(file_menu_open, FALSE);
+	
 	g_signal_connect(G_OBJECT(cfile), "verification-progress-update",
 					 G_CALLBACK(on_verification_progress_updated),NULL);
-	g_object_set(progress, "visible", TRUE, NULL);
+	g_signal_connect(G_OBJECT(get_checksum_file()), "verification-complete",
+					 G_CALLBACK(on_verification_complete), NULL);
+	g_object_set(progress, "visible", TRUE, "fraction", 0.0, NULL);
 	cichlid_checksum_file_verify(cfile);
 }

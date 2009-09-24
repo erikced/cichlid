@@ -201,6 +201,15 @@ cichlid_checksum_file_verifier_start(CichlidChecksumFileVerifier *self, GError *
 	return TRUE;
 }
 
+static gboolean
+cichlid_checksum_file_verifier_verification_complete(CichlidChecksumFileVerifier *self)
+{
+	g_return_val_if_fail(CICHLID_IS_CHECKSUM_FILE_VERIFIER(self), FALSE);
+	g_signal_emit(G_OBJECT(self), signal_verification_complete, 0);
+	return FALSE;
+}
+
+
 static void
 cichlid_checksum_file_verifier_verify(CichlidChecksumFileVerifier *self)
 {
@@ -313,7 +322,7 @@ cichlid_checksum_file_verifier_verify(CichlidChecksumFileVerifier *self)
 	/* Reset internal variables */
 	self->active = FALSE;
 	/* Verification Complete signal */
-	g_signal_emit(G_OBJECT(self), signal_verification_complete, 0);
+	g_idle_add((GSourceFunc)cichlid_checksum_file_verifier_verification_complete, self);
 }
 
 static gboolean
