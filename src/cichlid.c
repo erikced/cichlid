@@ -154,12 +154,6 @@ filelist_status_sort_func(GtkTreeModel *model, GtkTreeIter *a, GtkTreeIter *b, g
 	return (status_a - status_b);
 }
 
-static void
-on_file_loaded(CichlidChecksumFile *cfile, gpointer user_data)
-{
-	g_debug("File Loaded");
-}
-
 int
 main(int argc, char **argv)
 {
@@ -194,6 +188,9 @@ main(int argc, char **argv)
 		fprintf(stderr," %s\n", error->message);
 		g_error_free(error);
 	}
+
+	g_object_unref(cfile);
+	g_object_unref(files_filter);
 
 	return 0;
 }

@@ -42,8 +42,6 @@ typedef struct
 #define cichlid_status_update_new() g_slice_alloc(sizeof(StatusUpdate))
 #define cichlid_status_update_free(p_status_update) g_slice_free1(sizeof(StatusUpdate),p_status_update)
 
-
-static void     cichlid_checksum_file_verifier_parent_finalized(CichlidChecksumFileVerifier *self, GObject *parent_address);
 static void     cichlid_checksum_file_verifier_verify(CichlidChecksumFileVerifier *self);
 static gboolean cichlid_checksum_file_verifier_update_progress(CichlidChecksumFileVerifier *self);
 static gboolean cichlid_checksum_file_verifier_update_status(CichlidChecksumFileVerifier *self);
@@ -58,7 +56,6 @@ cichlid_checksum_file_verifier_dispose(GObject *gobject)
 {
 	CichlidChecksumFileVerifier *self = CICHLID_CHECKSUM_FILE_VERIFIER(gobject);
 
-	g_object_unref(self->checksum_file);
 	g_mutex_free(self->status_update_lock);
 
 	/* Chain up to the parent class */
@@ -119,19 +116,11 @@ CichlidChecksumFileVerifier *
 cichlid_checksum_file_verifier_new(CichlidChecksumFile *checksum_file)
 {
 	CichlidChecksumFileVerifier *obj;
+	g_return_val_if_fail(CICHLID_IS_CHECKSUM_FILE(checksum_file), NULL);
 	obj = g_object_new(CICHLID_TYPE_CHECKSUM_FILE_VERIFIER, NULL);
-	g_object_weak_ref(G_OBJECT(checksum_file), (GWeakNotify)cichlid_checksum_file_verifier_parent_finalized, obj);
 	obj->checksum_file = checksum_file;
 
 	return obj;
-}
-
-static void
-cichlid_checksum_file_verifier_parent_finalized(CichlidChecksumFileVerifier *self, GObject *parent_address)
-{
-	g_return_if_fail(CICHLID_IS_CHECKSUM_FILE_VERIFIER(self));
-
-	g_object_unref(self);
 }
 
 gboolean
@@ -249,9 +238,7 @@ cichlid_checksum_file_verifier_verify(CichlidChecksumFileVerifier *self)
 	{
 		do
 		{
-			/* Get the filename */
 			gtk_tree_model_get(GTK_TREE_MODEL(self->checksum_file), &iter,
-					CICHLID_CHECKSUM_FILE_FILENAME, &filename,
 					CICHLID_CHECKSUM_FILE_GFILE, &file,
 					CICHLID_CHECKSUM_FILE_CHECKSUM, &precalculated_checksum, -1);
 
@@ -308,6 +295,11 @@ cichlid_checksum_file_verifier_verify(CichlidChecksumFileVerifier *self)
 				checksum = NULL;
 			}
 
+			if (filestream)
+			{
+				g_object_unref(filestream);
+				filestream = NULL;
+			}
 			g_object_unref(file);
 
 			if (g_atomic_int_get(&self->abort))

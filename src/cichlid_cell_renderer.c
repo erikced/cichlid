@@ -58,7 +58,7 @@ static void cichlid_cell_renderer_get_size(GtkCellRenderer *cell,
 		                                   gint            *height);
 static void cichlid_cell_renderer_set_property(GObject    *object,
 		                                       guint       property_id,
-		                                       GValue     *value,
+		                                       const GValue *value,
 		                                       GParamSpec *pspec);
 
 //static void
@@ -374,7 +374,7 @@ cichlid_cell_renderer_get_property(GObject *object, guint property_id, GValue *v
 }
 
 static void
-cichlid_cell_renderer_set_property(GObject *object, guint property_id, GValue *value, GParamSpec *pspec)
+cichlid_cell_renderer_set_property(GObject *object, guint property_id, const GValue *value, GParamSpec *pspec)
 {
 	CichlidCellRenderer        *self = CICHLID_CELL_RENDERER(object);
 	CichlidCellRendererPrivate *priv = self->priv;

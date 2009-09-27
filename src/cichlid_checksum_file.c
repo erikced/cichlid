@@ -112,22 +112,22 @@ static void        cichlid_checksum_file_get_value(GtkTreeModel *self,
 												   GtkTreeIter *iter,
 												   int column,
 												   GValue *value);
-static void        cichlid_checksum_file_get_property(GObject *object,
-		                                              guint property_id,
-		                                              GValue *value,
-		                                              GParamSpec *pspec);
-static void        cichlid_checksum_file_parse(CichlidChecksumFile *self);
-static void        cichlid_checksum_file_queue_file(CichlidChecksumFile *self,
-													const char *filename,
-													const char *base_path,
-													gconstpointer checksum);
-static inline void cichlid_checksum_file_read_checksum(CichlidChecksumFile *self,
-													   uint32_t *checksum,
-													   const char *checksum_start);
-static void        cichlid_checksum_file_set_property(GObject    *object,
+static void        cichlid_checksum_file_get_property(GObject    *object,
 		                                              guint       property_id,
 		                                              GValue     *value,
 		                                              GParamSpec *pspec);
+static void        cichlid_checksum_file_parse(CichlidChecksumFile *self);
+static void        cichlid_checksum_file_queue_file(CichlidChecksumFile *self,
+													const char   *filename,
+													const char   *base_path,
+													gconstpointer checksum);
+static inline void cichlid_checksum_file_read_checksum(CichlidChecksumFile *self,
+													   uint32_t            *checksum,
+													   const char          *checksum_start);
+static void        cichlid_checksum_file_set_property(GObject      *object,
+		                                              guint         property_id,
+		                                              const GValue *value,
+		                                              GParamSpec   *pspec);
 
 static void        cichlid_checksum_file_set_filetype(CichlidChecksumFile *self,
 													  GFile *file,
@@ -146,7 +146,7 @@ static GtkTreeModelIface parent_iface;
 static unsigned int signals[N_SIGNALS];
 
 G_DEFINE_TYPE_WITH_CODE(CichlidChecksumFile, cichlid_checksum_file, GTK_TYPE_LIST_STORE,
-		G_IMPLEMENT_INTERFACE (GTK_TYPE_TREE_MODEL, gtk_tree_model_interface_init));
+						G_IMPLEMENT_INTERFACE (GTK_TYPE_TREE_MODEL, gtk_tree_model_interface_init));
 
 /*
  * Initialize the interface
@@ -172,14 +172,14 @@ cichlid_checksum_file_dispose(GObject *gobject)
 	{
 		g_object_unref(g_queue_pop_head(priv->file_queue));
 	}
-
+	
 	g_object_unref(priv->verifier);
 	g_object_unref(priv->file);
 	g_queue_free(priv->file_queue);
 	g_mutex_free(priv->file_queue_lock);
 
-	/* Chain up to the parent class */
-	G_OBJECT_CLASS (cichlid_checksum_file_parent_class)->dispose (gobject);
+	
+	G_OBJECT_CLASS(cichlid_checksum_file_parent_class)->dispose(gobject);
 }
 
 static void
@@ -187,7 +187,7 @@ cichlid_checksum_file_finalize(GObject *gobject)
 {
 	CichlidChecksumFile *self = CICHLID_CHECKSUM_FILE(gobject);
 
-	G_OBJECT_CLASS (cichlid_checksum_file_parent_class)->finalize (gobject);
+	G_OBJECT_CLASS(cichlid_checksum_file_parent_class)->finalize(gobject);
 }
 
 
@@ -493,7 +493,7 @@ cichlid_checksum_file_set_filetype_options(CichlidChecksumFile *self, int hash, 
 }
 
 static void
-cichlid_checksum_file_set_property(GObject *object, guint property_id, GValue *value, GParamSpec *pspec)
+cichlid_checksum_file_set_property(GObject *object, guint property_id, const GValue *value, GParamSpec *pspec)
 {
 	CichlidChecksumFile        *self = CICHLID_CHECKSUM_FILE(object);
 	CichlidChecksumFilePrivate *priv = self->priv;
@@ -749,6 +749,7 @@ cichlid_checksum_file_queue_file(CichlidChecksumFile *self, const char *filename
 	g_mutex_unlock(priv->file_queue_lock);
 
 	g_object_unref(folder);
+	g_free(file_path);
 	g_free(rel_path);
 }
 
