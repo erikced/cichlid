@@ -29,11 +29,11 @@
 
 enum
 {
-  GFILE = 0,
-  NAME,
-  STATUS,
-  PRECALCULATED_CHECKSUM,
-  N_COLUMNS
+	GFILE = 0,
+	NAME,
+	STATUS,
+	PRECALCULATED_CHECKSUM,
+	N_COLUMNS
 };
 
 //GtkListStore *files;
@@ -44,58 +44,13 @@ static guint filter_flags = (1 << STATUS_GOOD) | (1 << STATUS_BAD) | (1 << STATU
 
 int hash_type = HASH_UNKNOWN;
 
-void on_verify_clicked(GtkWidget *widget, gpointer user_data);
-
 void
 on_main_window_destroy(GtkWidget *widget, gpointer user_data)
 {
 	gtk_main_quit();
 }
 
-void
-on_file_menu_quit_activate(GtkWidget *widget, gpointer user_data)
-{
-	gtk_main_quit();
-}
-
-void
-on_file_menu_open_activate(GtkWidget *widget, gpointer user_data)
-{
-	GtkWidget *filechooser;
-	GtkFileFilter *filter;
-	GFile *file = NULL;
-
-	filter = gtk_file_filter_new();
-	/* TODO: Add more SHAx filetypes */
-	gtk_file_filter_add_pattern(filter, "*.sfv");
-	gtk_file_filter_add_pattern(filter, "*.md5");
-	gtk_file_filter_add_pattern(filter, "MD5SUM");
-	gtk_file_filter_add_pattern(filter, "MD5SUMS");
-
-	filechooser = gtk_file_chooser_dialog_new ("Open File",
-											   GTK_WINDOW(cichlid_main_window_get_window()),
-											   GTK_FILE_CHOOSER_ACTION_OPEN,
-											   GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
-											   GTK_STOCK_OPEN, GTK_RESPONSE_ACCEPT,
-											   NULL);
-
-	gtk_file_chooser_set_filter(GTK_FILE_CHOOSER(filechooser), filter);
-
-	if (gtk_dialog_run(GTK_DIALOG(filechooser)) == GTK_RESPONSE_ACCEPT)
-		file = gtk_file_chooser_get_file(GTK_FILE_CHOOSER(filechooser));
-	gtk_widget_destroy(filechooser);
-
-	if (file)
-	{
-		//ck_main_window_treeview_enable(FALSE);
-		//clear_filelist();
-		//ck_main_window_treeview_enable(TRUE);
-		cichlid_checksum_file_load(cfile, file);
-		g_object_unref(file);
-	}
-}
-
-/**
+/*
  * Changes the filter parameter and updates the filter
  */
 void
@@ -123,7 +78,7 @@ on_filter_changed(GtkWidget *cb_filter, gpointer user_data)
 	cichlid_main_window_show_filelist(TRUE);
 }
 
-/**
+/*
  * Filtering function for filtering out specific results
  */
 gboolean
@@ -219,7 +174,6 @@ main(int argc, char **argv)
 
 	/* Initialize the CichlidChecksumFile and the Filter */
 	cfile = g_object_new(CICHLID_TYPE_CHECKSUM_FILE, NULL);
-	g_signal_connect(G_OBJECT(cfile), "file-loaded", G_CALLBACK(on_file_loaded), NULL);
 
 	files_filter = gtk_tree_model_filter_new(GTK_TREE_MODEL(cfile), NULL);
 	gtk_tree_model_filter_set_visible_func(GTK_TREE_MODEL_FILTER(files_filter), filelist_filter_func, NULL, NULL);
@@ -237,7 +191,7 @@ main(int argc, char **argv)
 	}
 	else
 	{
-		fprintf(stderr," %s\n",error->message);
+		fprintf(stderr," %s\n", error->message);
 		g_error_free(error);
 	}
 

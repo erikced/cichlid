@@ -69,8 +69,9 @@ struct _CichlidChecksumFileClass
 
 GType cichlid_checksum_file_get_type(void);
 
-void cichlid_checksum_file_load_from_cmd(CichlidChecksumFile *self, const char *filename);
-void cichlid_checksum_file_load(CichlidChecksumFile *self, GFile *checksum_file);
-void cichlid_checksum_file_set(CichlidChecksumFile *self, GtkTreeIter *iter, int column, GValue *value);
-void cichlid_checksum_file_verify(CichlidChecksumFile *self);
+void  cichlid_checksum_file_load_from_cmd(CichlidChecksumFile *self, const char *filename);
+void  cichlid_checksum_file_load(CichlidChecksumFile *self, GFile *checksum_file);
+char *cichlid_checksum_file_get_filename(CichlidChecksumFile *self);
+void  cichlid_checksum_file_set(CichlidChecksumFile *self, GtkTreeIter *iter, int column, GValue *value);
+void  cichlid_checksum_file_verify(CichlidChecksumFile *self);
 #endif /* CICHLID_CHECKSUM_FILE_H */

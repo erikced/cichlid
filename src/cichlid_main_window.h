@@ -1,5 +1,5 @@
 /*
- * Copyright © 2008 Erik Cederberg <erikced@gmail.com>
+ * Copyright © 2009 Erik Cederberg <erikced@gmail.com>
  *
  * crcchk - cichlid_main_window.h
  *
@@ -22,5 +22,6 @@
 GtkWidget *cichlid_main_window_get_window();
 gboolean   cichlid_main_window_new(GtkTreeModel *model, GError **error);
 void       cichlid_main_window_show_filelist(gboolean enable);
-#endif /* GUI_H */
+
+#endif /* CICHLID_MAIN_WINDOW_H */
 

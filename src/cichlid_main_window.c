@@ -1,7 +1,7 @@
 /*
  * Copyright © 2009 Erik Cederberg <erikced@gmail.com>
  *
- * cichlid - gui.c
+ * cichlid - cichlid_main_window.c
  *
  * cichlid is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -49,6 +49,11 @@ static void filelist_render_status_text(GtkTreeViewColumn *column,
 										gpointer data);
 static CichlidChecksumFile *get_checksum_file();
 static void on_about_activate();
+static void on_checksum_file_loaded();
+static void on_file_menu_quit_activate(GtkWidget *widget,
+									   gpointer user_data);
+static void on_file_menu_open_activate(GtkWidget *widget,
+									   gpointer user_data);
 static void on_verify_clicked();
 static void on_verification_complete();
 static void on_verification_progress_updated();
@@ -92,6 +97,13 @@ cichlid_main_window_new(GtkTreeModel *model,
 	/* File list */
 	filelist = GTK_WIDGET(gtk_builder_get_object(WindowBuilder,"tv_files"));
 	filelist_init(model);
+	g_signal_connect(G_OBJECT(get_checksum_file()), "file-loaded",
+					 G_CALLBACK(on_checksum_file_loaded), NULL);
+	g_signal_connect(G_OBJECT(get_checksum_file()), "verification-progress-update",
+					 G_CALLBACK(on_verification_progress_updated),NULL);
+	g_signal_connect(G_OBJECT(get_checksum_file()), "verification-complete",
+					 G_CALLBACK(on_verification_complete), NULL);
+
 	
 	/* File filter combobox */
 	cb_filter = GTK_WIDGET(gtk_builder_get_object(WindowBuilder,"cb_filter"));
@@ -153,14 +165,6 @@ filelist_init(GtkTreeModel *model)
 	gtk_tree_view_set_model(GTK_TREE_VIEW(filelist), model);
 }
 
-static CichlidChecksumFile *
-get_checksum_file()
-{
-	return CICHLID_CHECKSUM_FILE(gtk_tree_model_filter_get_model
-								 (GTK_TREE_MODEL_FILTER(gtk_tree_view_get_model
-														(GTK_TREE_VIEW(filelist)))));
-}
-
 static void
 filelist_render_status_text(GtkTreeViewColumn *column,
 							GtkCellRenderer *renderer,
@@ -183,6 +187,14 @@ filelist_render_status_text(GtkTreeViewColumn *column,
 		g_object_set(renderer, "text", status, "foreground", NULL, NULL);
 }
 
+static CichlidChecksumFile *
+get_checksum_file()
+{
+	return CICHLID_CHECKSUM_FILE(gtk_tree_model_filter_get_model
+								 (GTK_TREE_MODEL_FILTER(gtk_tree_view_get_model
+														(GTK_TREE_VIEW(filelist)))));
+}
+
 static void
 on_about_activate()
 {
@@ -194,11 +206,77 @@ on_about_activate()
 }
 
 static void
+on_checksum_file_loaded()
+{
+	gtk_widget_set_sensitive(btn_verify, TRUE);
+	gtk_widget_set_sensitive(file_menu_open, TRUE);
+
+	gdk_window_set_cursor(main_window->window, NULL);
+}
+
+void
+on_file_menu_quit_activate(GtkWidget *widget, gpointer user_data)
+{
+	gtk_main_quit();
+}
+
+void
+on_file_menu_open_activate(GtkWidget *widget, gpointer user_data)
+{
+	GdkCursor *cursor;
+	GtkWidget *filechooser;
+	GtkFileFilter *filter;
+	GFile *file = NULL;
+
+	filter = gtk_file_filter_new();
+	/* TODO: Add more SHAx filetypes */
+	gtk_file_filter_add_pattern(filter, "*.sfv");
+	gtk_file_filter_add_pattern(filter, "*.md5");
+	gtk_file_filter_add_pattern(filter, "MD5SUM");
+	gtk_file_filter_add_pattern(filter, "MD5SUMS");
+
+	filechooser = gtk_file_chooser_dialog_new ("Open File",
+											   GTK_WINDOW(cichlid_main_window_get_window()),
+											   GTK_FILE_CHOOSER_ACTION_OPEN,
+											   GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
+											   GTK_STOCK_OPEN, GTK_RESPONSE_ACCEPT,
+											   NULL);
+
+	gtk_file_chooser_set_filter(GTK_FILE_CHOOSER(filechooser), filter);
+
+	if (gtk_dialog_run(GTK_DIALOG(filechooser)) == GTK_RESPONSE_ACCEPT)
+		file = gtk_file_chooser_get_file(GTK_FILE_CHOOSER(filechooser));
+	gtk_widget_destroy(filechooser);
+
+	if (file)
+	{
+		gchar *filename;
+		
+		cursor = gdk_cursor_new_for_display(gdk_display_get_default(), GDK_WATCH);
+		gdk_window_set_cursor(main_window->window, cursor);
+		gtk_widget_set_sensitive(btn_verify, FALSE);
+		gtk_widget_set_sensitive(file_menu_open, FALSE);
+
+		cichlid_checksum_file_load(get_checksum_file(), file);
+		filename = cichlid_checksum_file_get_filename(get_checksum_file());
+		if (filename)
+		{
+			gtk_window_set_title(GTK_WINDOW(main_window), filename);
+			g_free(filename);
+		}
+		else
+			gtk_window_set_title(GTK_WINDOW(main_window), "cichlid");
+
+		gdk_cursor_unref(cursor);
+		g_object_unref(file);
+	}
+}
+
+static void
 on_main_window_destroyed()
 {
 	created = FALSE;
 }
-
 
 static void
 on_verification_progress_updated(double _progress)
@@ -221,11 +299,7 @@ on_verify_clicked()
 	
 	gtk_widget_set_sensitive(btn_verify, FALSE);
 	gtk_widget_set_sensitive(file_menu_open, FALSE);
-	
-	g_signal_connect(G_OBJECT(cfile), "verification-progress-update",
-					 G_CALLBACK(on_verification_progress_updated),NULL);
-	g_signal_connect(G_OBJECT(get_checksum_file()), "verification-complete",
-					 G_CALLBACK(on_verification_complete), NULL);
+
 	g_object_set(progress, "visible", TRUE, "fraction", 0.0, NULL);
 	cichlid_checksum_file_verify(cfile);
 }
