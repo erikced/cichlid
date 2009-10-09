@@ -28,6 +28,7 @@
 #include "cichlid_hash.h"
 #include "cichlid_hash_crc32.h"
 #include "cichlid_hash_md5.h"
+#include "cichlid_hash_sha256.h"
 #include "cichlid_checksum_file_v.h"
 
 typedef struct
@@ -227,6 +228,9 @@ cichlid_checksum_file_verifier_verify(CichlidChecksumFileVerifier *self)
 	case HASH_MD5:
 		hashfunc = cichlid_hash_md5_new();
 		break;
+	case HASH_SHA256:
+		hashfunc = cichlid_hash_sha256_new();
+		break;
 	default:
     	g_assert_not_reached();
 	}
@@ -256,6 +260,9 @@ cichlid_checksum_file_verifier_verify(CichlidChecksumFileVerifier *self)
 				while (bytes_read > 0 && !g_atomic_int_get(&self->abort));
 
 				checksum = cichlid_hash_get_hash(hashfunc);
+				char *str = cichlid_hash_get_hash_string(hashfunc);
+				g_debug("%s", str);
+				g_free(str);
 			}
 
 			/* Create a status update and add it to the list */

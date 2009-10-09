@@ -172,9 +172,10 @@ cichlid_checksum_file_dispose(GObject *gobject)
 	{
 		g_object_unref(g_queue_pop_head(priv->file_queue));
 	}
-	
+
+	if (priv->file)
+		g_object_unref(priv->file);
 	g_object_unref(priv->verifier);
-	g_object_unref(priv->file);
 	g_queue_free(priv->file_queue);
 	g_mutex_free(priv->file_queue_lock);
 
@@ -408,16 +409,16 @@ cichlid_checksum_file_load(CichlidChecksumFile *self, GFile *checksum_file)
 
 	cichlid_checksum_file_set_filetype(self, checksum_file, &error);
 
-#ifdef NO_THREADS
-	cichlid_checksum_file_parse(self);
-	cichlid_checksum_file_insert_files(self);
-#else
-	g_idle_add((GSourceFunc)cichlid_checksum_file_insert_files, self);
+	priv->file_parsed = FALSE;
+	
 	g_thread_create((GThreadFunc)cichlid_checksum_file_parse, self, FALSE, NULL);
-#endif
+	g_idle_add((GSourceFunc)cichlid_checksum_file_insert_files, self);
 
 	if (error != NULL)
+	{
+		g_debug("%s", error->message);
 		g_error_free(error);
+	}
 }
 
 /**
@@ -464,10 +465,16 @@ cichlid_checksum_file_set_filetype(CichlidChecksumFile *self, GFile *file, GErro
 	filename = g_file_info_get_attribute_byte_string(info,G_FILE_ATTRIBUTE_STANDARD_NAME);
 	extension = cichlid_checksum_file_get_extension(filename);
 
-	if (g_strcmp0(extension,"sfv") == 0)
+	if (g_strcmp0(extension, "sfv") == 0)
 		cichlid_checksum_file_set_filetype_options(self, HASH_CRC32, 8, CHECKSUM_LAST, ' ', ';');
-	else if (g_strcmp0(extension,"md5") == 0 || g_utf8_collate(filename,"MD5SUM") == 0 || g_utf8_collate(filename,"MD5SUMS") == 0)
+	else if (g_strcmp0(extension, "md5") == 0 ||
+			 g_utf8_collate(filename,"MD5SUM") == 0 ||
+			 g_utf8_collate(filename,"MD5SUMS") == 0)
 		cichlid_checksum_file_set_filetype_options(self, HASH_MD5, 32, CHECKSUM_FIRST, 2, '#');
+	else if (g_strcmp0(extension, "sha256") == 0 ||
+			 g_utf8_collate(filename, "SHA256SUM") == 0 ||
+			 g_utf8_collate(filename, "SHA256SUMS") == 0)
+		cichlid_checksum_file_set_filetype_options(self, HASH_SHA256, 64, CHECKSUM_FIRST, 2, '#');
 	else
 	{
 		cichlid_checksum_file_set_filetype_options(self, HASH_UNKNOWN, 0, 0, '\0','\0');
@@ -599,8 +606,6 @@ cichlid_checksum_file_parse(CichlidChecksumFile *self)
 	CichlidChecksumFilePrivate *priv = self->priv;
 	GFile *checksum_file = priv->file;
 	g_assert(checksum_file != NULL);
-
-	priv->file_parsed = FALSE;
 
 	if (priv->cs_type == HASH_UNKNOWN)
 		return;

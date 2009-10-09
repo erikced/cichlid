@@ -27,25 +27,16 @@
 #include <string.h>
 
 #include "cichlid_hash.h"
+#include "cichlid_hash_common.h"
 #include "cichlid_hash_md5.h"
 
-#define BUFFER_SIZE 1024*512
+static void      cichlid_hash_interface_init(CichlidHashInterface *iface);
+static void      cichlid_hash_md5_calc (CichlidHashMd5 *self, const char *buf, size_t bytes_read);
+static gboolean  cichlid_hash_md5_equals (uint32_t* a, uint32_t* b);
+static uint32_t *cichlid_hash_md5_get_hash (CichlidHash *object);
+static char     *cichlid_hash_md5_get_hash_string (CichlidHash *object);
+static void      cichlid_hash_md5_update (CichlidHash *object, const char *data, size_t data_size);
 
-enum
-{
-	READING = 0,
-	BIT_APPENDED,
-	SIZE_APPENDED
-};
-
-static void            cichlid_hash_md5_calc (CichlidHashMd5 *self, const char *buf, size_t bytes_read);
-static gboolean        cichlid_hash_md5_equals (uint32_t* a, uint32_t* b);
-static inline void     cichlid_hash_md5_flip_endianness (uint32_t *destination, uint32_t *source);
-static uint32_t       *cichlid_hash_md5_get_hash (CichlidHash *object);
-static char           *cichlid_hash_md5_get_hash_string (CichlidHash *object);
-static inline uint32_t cichlid_hash_md5_rotate_left (uint32_t x, uint32_t y);
-static void            cichlid_hash_md5_update (CichlidHash *object, const char *data, size_t data_size);
-static void            cichlid_hash_interface_init (CichlidHashInterface *iface);
 
 static const uint32_t shift_lookup_table[64] = {
 		0x07, 0x0C, 0x11, 0x16,
@@ -106,7 +97,6 @@ cichlid_hash_md5_dispose(GObject *gobject)
 {
 	CichlidHashMd5 *self = CICHLID_HASH_MD5 (gobject);
 
-	/* Chain up to the parent class */
 	G_OBJECT_CLASS (cichlid_hash_md5_parent_class)->dispose (gobject);
 }
 
@@ -125,8 +115,6 @@ cichlid_hash_md5_class_init(CichlidHashMd5Class *klass)
 	GObjectClass *gobject_class = G_OBJECT_CLASS (klass);
 	gobject_class->dispose = cichlid_hash_md5_dispose;
 	gobject_class->finalize = cichlid_hash_md5_finalize;
-
-	/* Initiera funktioner */
 }
 
 
@@ -134,10 +122,10 @@ static void
 cichlid_hash_md5_init(CichlidHashMd5 *self)
 {
 	/* Partial result variables */
-	self->p[0] = 0x67452301;
-	self->p[1] = 0xEFCDAB89;
-	self->p[2] = 0x98BADCFE;
-	self->p[3] = 0x10325476;
+	self->h[0] = 0x67452301;
+	self->h[1] = 0xEFCDAB89;
+	self->h[2] = 0x98BADCFE;
+	self->h[3] = 0x10325476;
 
 	self->hash_computed = FALSE;
 	self->total_size = 0;
@@ -242,9 +230,9 @@ cichlid_hash_md5_get_hash(CichlidHash *object)
 		self->hash_computed = TRUE;
 	}
 
-	/* Copy the hash and switch endianness */
+	/* Copy the hash and convert answer from big to little-endian */
 	hash = g_malloc(sizeof(uint32_t)*4);
-	cichlid_hash_md5_flip_endianness(hash, self->p);
+	CHANGE_ENDIANNESS(hash, self->h, 1);
 
 	return hash;
 }
@@ -287,10 +275,10 @@ cichlid_hash_md5_calc(CichlidHashMd5 *self, const char *buf, size_t bytes_read)
 		/* Set w to start at the proper place */
 		w = (uint32_t*)(buf + j*64);
 		/* Initialize with the current values */
-		a = self->p[0];
-		b = self->p[1];
-		c = self->p[2];
-		d = self->p[3];
+		a = self->h[0];
+		b = self->h[1];
+		c = self->h[2];
+		d = self->h[3];
 
 		/* Calculate */
 		for (int i = 0; i < 64; i++)
@@ -319,40 +307,15 @@ cichlid_hash_md5_calc(CichlidHashMd5 *self, const char *buf, size_t bytes_read)
 			tmp = d;
 			d = c;
 			c = b;
-			b = b + cichlid_hash_md5_rotate_left (a + f + shift_angle_table[i] + w[g], shift_lookup_table[i]);
+			b = b + ROTATE_LEFT(a + f + shift_angle_table[i] + w[g], shift_lookup_table[i]);
 			a = tmp;
 		}
 
 		/* Add this chunks result to the total result */
-		self->p[0] += a;
-		self->p[1] += b;
-		self->p[2] += c;
-		self->p[3] += d;
+		self->h[0] += a;
+		self->h[1] += b;
+		self->h[2] += c;
+		self->h[3] += d;
 	}
 }
 
-/**
- * Performs a left rotation of x with y steps
- * @param x the variable to be rotated
- * @param y the number of steps it should rotate
- */
-static inline uint32_t
-cichlid_hash_md5_rotate_left(uint32_t x, uint32_t y)
-{
-	return ((x) << (y)) | ((x) >> (32-y));
-}
-
-/**
- * Flips the endianness of 4 32-bit integers in source and saves it in destination
- * @param destination
- * @param source
- */
-static inline void
-cichlid_hash_md5_flip_endianness(uint32_t *destination, uint32_t *source)
-{
-	for (int i = 0; i < 4; i++)
-		destination[i] = ((source[i] & 0xFF) << 24) |
-		((source[i] & 0xFF00) << 8) |
-		((source[i] & 0xFF0000) >> 8) |
-		((source[i] & 0xFF000000) >> 24);
-}

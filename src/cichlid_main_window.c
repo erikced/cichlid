@@ -27,6 +27,9 @@
 #include "cichlid_cell_renderer.h"
 #include "cichlid_checksum_file.h"
 
+#include "cichlid_hash.h"
+#include "cichlid_hash_sha256.h"
+
 #define MAIN_UI_SYSTEM PKGDATADIR"/cichlid.ui"
 #define MAIN_UI_SOURCE "data/cichlid.ui"
 
@@ -153,7 +156,9 @@ filelist_init(GtkTreeModel *model)
 	//column = gtk_tree_view_column_new_with_attributes(C_("Computer file","File"), renderer, "file", CICHLID_CHECKSUM_FILE_FILE,  NULL);
 	renderer = gtk_cell_renderer_text_new();
 	column = gtk_tree_view_column_new_with_attributes(C_("Computer file","File"), renderer,
-													  "text", CICHLID_CHECKSUM_FILE_FILENAME, NULL);
+													  "text", CICHLID_CHECKSUM_FILE_FILENAME,
+													  NULL);
+	gtk_tree_view_column_set_expand(column, TRUE);
 	gtk_tree_view_append_column(GTK_TREE_VIEW(filelist), column);
 	
 	/* Status column */
@@ -234,6 +239,9 @@ on_file_menu_open_activate(GtkWidget *widget, gpointer user_data)
 	gtk_file_filter_add_pattern(filter, "*.md5");
 	gtk_file_filter_add_pattern(filter, "MD5SUM");
 	gtk_file_filter_add_pattern(filter, "MD5SUMS");
+	gtk_file_filter_add_pattern(filter, "*.sha256");
+	gtk_file_filter_add_pattern(filter, "SHA256SUM");
+	gtk_file_filter_add_pattern(filter, "SHA256SUMS");
 
 	filechooser = gtk_file_chooser_dialog_new ("Open File",
 											   GTK_WINDOW(cichlid_main_window_get_window()),

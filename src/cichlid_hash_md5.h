@@ -42,7 +42,7 @@ struct _CichlidHashMd5
   GObject parent_instance;
 
   /* Private */
-  uint32_t  p[4];
+  uint32_t  h[4];
   uint8_t   data_left[63];
   uint8_t   data_left_size;
   uint64_t  total_size;

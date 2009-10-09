@@ -45,7 +45,11 @@ typedef enum
   HASH_UNKNOWN = 0,
   HASH_CRC32,
   HASH_MD5,
-  HASH_SHA1
+  HASH_SHA1,
+  HASH_SHA224,
+  HASH_SHA256,
+  HASH_SHA384,
+  HASH_SHA512
 } hash_t;
 
 typedef struct _CichlidChecksumFile        CichlidChecksumFile;
