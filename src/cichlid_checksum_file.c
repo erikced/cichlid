@@ -30,6 +30,7 @@
 #include "cichlid_hash.h"
 #include "cichlid_checksum_file.h"
 #include "cichlid_checksum_file_v.h"
+#include "cichlid_marshal.h"
 
 typedef struct _CichlidChecksumFilePrivate CichlidChecksumFilePrivate;
 
@@ -225,9 +226,9 @@ cichlid_checksum_file_class_init(CichlidChecksumFileClass *klass)
 														   G_STRUCT_OFFSET(CichlidChecksumFileClass,
 																		   verification_progress_update),
 														   NULL, NULL,
-														   g_cclosure_marshal_VOID__DOUBLE,
-														   G_TYPE_NONE, 1,
-														   G_TYPE_DOUBLE);
+														   cichlid_marshal_VOID__DOUBLE_DOUBLE,
+														   G_TYPE_NONE, 2,
+														   G_TYPE_DOUBLE, G_TYPE_DOUBLE);
 	
 	signals[S_VERIFICATION_COMPLETE] = g_signal_new("verification-complete",
 													G_TYPE_FROM_CLASS(gobject_class),
@@ -240,10 +241,10 @@ cichlid_checksum_file_class_init(CichlidChecksumFileClass *klass)
 }
 
 static void
-on_verifier_progress_update(double progress, CichlidChecksumFileVerifier *ver, CichlidChecksumFile *self)
+on_verifier_progress_update(double progress, double speed, CichlidChecksumFileVerifier *ver, CichlidChecksumFile *self)
 {
 	g_return_if_fail(CICHLID_IS_CHECKSUM_FILE(self));
-	g_signal_emit(G_OBJECT(self), signals[S_VERIFICATION_PROGRESS_UPDATE], 0, progress);
+	g_signal_emit(G_OBJECT(self), signals[S_VERIFICATION_PROGRESS_UPDATE], 0, progress, speed);
 }
 
 static void

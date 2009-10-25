@@ -40,7 +40,7 @@ enum
 GtkTreeModel *files_filter;
 GtkTreeModel *files_sort;
 CichlidChecksumFile *cfile;
-static guint filter_flags = (1 << STATUS_GOOD) | (1 << STATUS_BAD) | (1 << STATUS_NOT_VERIFIED) | (1 << STATUS_NOT_FOUND);
+static unsigned int filter_flags = (1 << STATUS_GOOD) | (1 << STATUS_BAD) | (1 << STATUS_NOT_VERIFIED) | (1 << STATUS_NOT_FOUND);
 
 int hash_type = HASH_UNKNOWN;
 
@@ -50,15 +50,11 @@ on_main_window_destroy(GtkWidget *widget, gpointer user_data)
 	gtk_main_quit();
 }
 
-/*
- * Changes the filter parameter and updates the filter
- */
+
 void
-on_filter_changed(GtkWidget *cb_filter, gpointer user_data)
+filelist_change_filter(int option)
 {
-	int active;
-	active = gtk_combo_box_get_active(GTK_COMBO_BOX(cb_filter));
-	switch (active)
+	switch (option)
 	{
 		case 0:
 			filter_flags = (1 << STATUS_GOOD) | (1 << STATUS_BAD) | (1 << STATUS_NOT_VERIFIED) | (1 << STATUS_NOT_FOUND);

@@ -33,16 +33,27 @@
 #define MAIN_UI_SYSTEM PKGDATADIR"/cichlid.ui"
 #define MAIN_UI_SOURCE "data/cichlid.ui"
 
-static gboolean  created = FALSE;
+enum
+{
+	B_ALL = 0,
+	B_OK,
+	B_CORRUPT,
+	B_MISSING,
+	N_BTNS
+};			
+
+static gboolean   created = FALSE;
 
 static GtkWidget *main_window;
 static GtkWidget *filelist;
 static GtkWidget *btn_verify;
+static GtkWidget *btn_filter[N_BTNS];
 static GtkWidget *cb_filter;
 static GtkWidget *file_menu_open;
 static GtkWidget *file_menu_quit;
 static GtkWidget *about;
 static GtkWidget *progress;
+static GtkWidget *progress_lbl;
 
 static void filelist_init(GtkTreeModel *model);
 static void filelist_render_status_text(GtkTreeViewColumn *column,
@@ -57,6 +68,7 @@ static void on_file_menu_quit_activate(GtkWidget *widget,
 									   gpointer user_data);
 static void on_file_menu_open_activate(GtkWidget *widget,
 									   gpointer user_data);
+static void on_filter_changed(GtkWidget *btn);
 static void on_verify_clicked();
 static void on_verification_complete();
 static void on_verification_progress_updated();
@@ -96,6 +108,9 @@ cichlid_main_window_new(GtkTreeModel *model,
 	
 	/* Progress Bar */
 	progress = GTK_WIDGET(gtk_builder_get_object(WindowBuilder,"pb_progress"));
+
+	/* Progress label */
+	progress_lbl = GTK_WIDGET(gtk_builder_get_object(WindowBuilder, "lbl_progress"));
 	
 	/* File list */
 	filelist = GTK_WIDGET(gtk_builder_get_object(WindowBuilder,"tv_files"));
@@ -109,8 +124,15 @@ cichlid_main_window_new(GtkTreeModel *model,
 
 	
 	/* File filter combobox */
-	cb_filter = GTK_WIDGET(gtk_builder_get_object(WindowBuilder,"cb_filter"));
-	g_signal_connect(G_OBJECT(cb_filter), "changed", G_CALLBACK(on_filter_changed), NULL);
+	//cb_filter = GTK_WIDGET(gtk_builder_get_object(WindowBuilder,"cb_filter"));
+	btn_filter[B_ALL] = GTK_WIDGET(gtk_builder_get_object(WindowBuilder,"btn_all"));
+	g_signal_connect(G_OBJECT(btn_filter[B_ALL]), "toggled", G_CALLBACK(on_filter_changed), NULL);
+	btn_filter[B_OK] = GTK_WIDGET(gtk_builder_get_object(WindowBuilder,"btn_good"));
+	g_signal_connect(G_OBJECT(btn_filter[B_OK]), "toggled", G_CALLBACK(on_filter_changed), NULL);
+	btn_filter[B_CORRUPT] = GTK_WIDGET(gtk_builder_get_object(WindowBuilder,"btn_corrupt"));
+	g_signal_connect(G_OBJECT(btn_filter[B_CORRUPT]), "toggled", G_CALLBACK(on_filter_changed), NULL);
+	btn_filter[B_MISSING] = GTK_WIDGET(gtk_builder_get_object(WindowBuilder,"btn_missing"));
+	g_signal_connect(G_OBJECT(btn_filter[B_MISSING]), "toggled", G_CALLBACK(on_filter_changed), NULL);
 	
 	/* Verify button */
 	btn_verify = GTK_WIDGET(gtk_builder_get_object(WindowBuilder,"btn_verify"));
@@ -281,21 +303,43 @@ on_file_menu_open_activate(GtkWidget *widget, gpointer user_data)
 }
 
 static void
+on_filter_changed(GtkWidget *btn)
+{
+	if (!gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(btn)))
+		return;
+	
+	int selected = -1;
+	for (int i = 0; i < N_BTNS; ++i)
+	{
+		if (btn == btn_filter[i])
+			selected = i;
+		else
+			gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(btn_filter[i]), FALSE);
+	}
+
+	filelist_change_filter(selected);
+}
+
+static void
 on_main_window_destroyed()
 {
 	created = FALSE;
 }
 
 static void
-on_verification_progress_updated(double _progress)
+on_verification_progress_updated(double _progress, double speed)
 {
-	gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(progress), _progress);
+	gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(progress), _progress);	
+ 	char *txt = g_strdup_printf(_("(%.1f Mb/s)"), speed);
+	gtk_label_set_text(GTK_LABEL(progress_lbl), txt);
+	g_free(txt);
 }
 
 static void
 on_verification_complete()
 {
 	g_object_set(progress, "visible", FALSE, NULL);
+	gtk_label_set_text(GTK_LABEL(progress_lbl), NULL);	
 	gtk_widget_set_sensitive(file_menu_open, TRUE);
 	gtk_widget_set_sensitive(btn_verify, TRUE);
 }

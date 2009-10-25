@@ -35,7 +35,7 @@ extern GtkListStore *files;
 extern GtkTreeModel *files_filter;
 extern GtkTreeModel *files_sort;
 
-void on_filter_changed(GtkWidget *widget, gpointer user_data);
+void filelist_change_filter(int option);
 
 #endif /* CICHLID_H */
 

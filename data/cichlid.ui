@@ -138,7 +138,7 @@
         <child>
           <object class="GtkVBox" id="vbox3">
             <property name="visible">True</property>
-            <property name="spacing">6</property>
+            <property name="spacing">2</property>
             <child>
               <object class="GtkAlignment" id="alignment1">
                 <property name="visible">True</property>
@@ -150,31 +150,64 @@
                     <property name="visible">True</property>
                     <property name="spacing">6</property>
                     <child>
-                      <object class="GtkLabel" id="label1">
+                      <object class="GtkToggleButton" id="btn_all">
+                        <property name="label" translatable="yes">A_ll</property>
                         <property name="visible">True</property>
-                        <property name="label" translatable="yes">Show:</property>
+                        <property name="can_focus">True</property>
+                        <property name="receives_default">True</property>
+                        <property name="relief">none</property>
+                        <property name="use_underline">True</property>
+                        <property name="active">True</property>
                       </object>
                       <packing>
                         <property name="expand">False</property>
-                        <property name="fill">False</property>
                         <property name="position">0</property>
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkComboBox" id="cb_filter">
+                      <object class="GtkToggleButton" id="btn_good">
+                        <property name="label" translatable="yes">_Good</property>
                         <property name="visible">True</property>
-                        <property name="model">filter_model</property>
-                        <property name="active">0</property>
-                        <child>
-                          <object class="GtkCellRendererText" id="cellrenderertext1"/>
-                          <attributes>
-                            <attribute name="text">0</attribute>
-                          </attributes>
-                        </child>
+                        <property name="can_focus">True</property>
+                        <property name="receives_default">True</property>
+                        <property name="relief">none</property>
+                        <property name="use_underline">True</property>
                       </object>
                       <packing>
+                        <property name="expand">False</property>
                         <property name="position">1</property>
                       </packing>
+                    </child>
+                    <child>
+                      <object class="GtkToggleButton" id="btn_corrupt">
+                        <property name="label" translatable="yes">_Corrupt</property>
+                        <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                        <property name="receives_default">True</property>
+                        <property name="relief">none</property>
+                        <property name="use_underline">True</property>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="position">2</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkToggleButton" id="btn_missing">
+                        <property name="label" translatable="yes">_Missing</property>
+                        <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                        <property name="receives_default">True</property>
+                        <property name="relief">none</property>
+                        <property name="use_underline">True</property>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="position">3</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <placeholder/>
                     </child>
                   </object>
                 </child>
@@ -221,10 +254,9 @@
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkLabel" id="label2">
+                      <object class="GtkLabel" id="lbl_progress">
                         <property name="visible">True</property>
                         <property name="xalign">0</property>
-                        <property name="label" translatable="yes">Verifying Files (18.0 Mb/s)</property>
                       </object>
                       <packing>
                         <property name="expand">False</property>
@@ -259,6 +291,7 @@
                             <property name="label" translatable="yes">_Verify</property>
                             <property name="visible">True</property>
                             <property name="can_focus">True</property>
+                            <property name="has_focus">True</property>
                             <property name="receives_default">True</property>
                             <property name="use_underline">True</property>
                           </object>

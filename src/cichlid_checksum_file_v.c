@@ -24,12 +24,13 @@
 #include <unistd.h>
 
 #include "cichlid.h"
+#include "cichlid_checksum_file_v.h"
 #include "cichlid_file.h"
 #include "cichlid_hash.h"
 #include "cichlid_hash_crc32.h"
 #include "cichlid_hash_md5.h"
 #include "cichlid_hash_sha256.h"
-#include "cichlid_checksum_file_v.h"
+#include "cichlid_marshal.h"
 
 typedef struct
 {
@@ -92,9 +93,9 @@ cichlid_checksum_file_verifier_class_init(CichlidChecksumFileVerifierClass *klas
 			G_SIGNAL_RUN_LAST,
 			G_STRUCT_OFFSET(CichlidChecksumFileVerifierClass, progress_update),
 			NULL, NULL,
-			g_cclosure_marshal_VOID__DOUBLE,
-			G_TYPE_NONE, 1,
-			G_TYPE_DOUBLE);
+			cichlid_marshal_VOID__DOUBLE_DOUBLE,
+			G_TYPE_NONE, 2,
+			G_TYPE_DOUBLE, G_TYPE_DOUBLE);
 }
 
 static void
@@ -195,6 +196,10 @@ static gboolean
 cichlid_checksum_file_verifier_verification_complete(CichlidChecksumFileVerifier *self)
 {
 	g_return_val_if_fail(CICHLID_IS_CHECKSUM_FILE_VERIFIER(self), FALSE);
+
+    /* Reset internal variables */
+	self->active = FALSE;
+
 	g_signal_emit(G_OBJECT(self), signal_verification_complete, 0);
 	return FALSE;
 }
@@ -281,12 +286,9 @@ cichlid_checksum_file_verifier_verify(CichlidChecksumFileVerifier *self)
 			g_mutex_lock(self->status_update_lock);
 			self->status_updates = g_list_prepend(self->status_updates,status_update);
 
-#ifdef NO_THREADS
-			cichlid_checksum_file_verifier_update_status(self);
-#else
 			if (!self->status_update_queued)
 				g_idle_add((GSourceFunc)cichlid_checksum_file_verifier_update_status, self);
-#endif
+
 			g_mutex_unlock(self->status_update_lock);
 
 			/* Clean up */
@@ -318,25 +320,57 @@ cichlid_checksum_file_verifier_verify(CichlidChecksumFileVerifier *self)
 		g_object_unref(hashfunc);
 	}
 
-	/* Reset internal variables */
-	self->active = FALSE;
 	/* Verification Complete signal */
 	g_idle_add((GSourceFunc)cichlid_checksum_file_verifier_verification_complete, self);
 }
 
+/*
+ * A GSourceFunc which emits the "progress-update" signal with PROGRESS_UPDATE_INTERVAL
+ * until all files are verified.
+ * @param self
+ * @returns FALSE if progress is 100% TRUE otherwise
+ */
 static gboolean
 cichlid_checksum_file_verifier_update_progress(CichlidChecksumFileVerifier *self)
 {
 	g_return_val_if_fail(CICHLID_IS_CHECKSUM_FILE_VERIFIER(self), FALSE);
 
+	static double prev_speed = 0;
+	static int prev_size = 0;
 	double progress;
+	double speed;
+	int cur_size;
 
-	progress = g_atomic_int_get(&self->verified_file_size) / (double)self->total_file_size ;
-	g_signal_emit(G_OBJECT(self), signal_progress_update, 0, progress);
+	cur_size = g_atomic_int_get(&self->verified_file_size);
+	progress = cur_size / (double)self->total_file_size;
+	if (speed)
+		speed = 0.5*prev_speed + (cur_size - prev_size)/(2*1000.0);
+	else
+		speed = (cur_size - prev_size)/1000.0;
 
-	return 1-(int)progress;
+	if (self->active)
+		g_signal_emit(G_OBJECT(self), signal_progress_update, 0, progress, speed);
+
+	if (!(1-(int)progress))
+	{
+		prev_size = 0;
+		prev_speed = 0;
+		return FALSE;
+	}
+
+	prev_size = cur_size;
+	prev_speed = speed;
+
+	return TRUE;
 }
 
+/*
+ * A GSourceFunc whose purpose is to make sure that the status of each verified
+ * file is changed from the main thread (in order not to mess up other signals)
+ * Updates at max 100 files each time.
+ * @param self
+ * @return TRUE if there are more files to update FALSE otherwise
+ */
 static gboolean
 cichlid_checksum_file_verifier_update_status(CichlidChecksumFileVerifier *self)
 {
@@ -365,4 +399,3 @@ cichlid_checksum_file_verifier_update_status(CichlidChecksumFileVerifier *self)
 	g_mutex_unlock(self->status_update_lock);
 	return queue;
 }
-

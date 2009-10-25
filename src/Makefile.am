@@ -23,7 +23,19 @@ cichlid_SOURCES = \
 	cichlid_hash_sha256.c \
 	cichlid_hash_sha256.h \
 	cichlid_main_window.c \
-	cichlid_main_window.h	
+	cichlid_main_window.h \
+	cichlid_marshal.c \
+	cichlid_marshal.h 
+
+cichlid_checksum_file.c: cichlid_marshal.h
+
+cichlid_checksum_file_v.c: cichlid_marshal.h
+
+cichlid_marshal.h: cichlid_marshal.list
+	glib-genmarshal --prefix=cichlid_marshal --header cichlid_marshal.list > cichlid_marshal.h
+
+cichlid_marshal.c: cichlid_marshal.list
+	glib-genmarshal --prefix=cichlid_marshal --body cichlid_marshal.list > cichlid_marshal.c
 
 cichlid_CFLAGS = \
 	-DPKGDATADIR=\""$(pkgdatadir)"\" \
