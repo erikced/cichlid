@@ -33,7 +33,7 @@ typedef struct _CichlidHashInterface CichlidHashInterface;
 
 struct _CichlidHashInterface
 {
-	GObjectClass parent_iface;
+	GTypeInterface parent_iface;
 
 	gboolean  (* equals)          (uint32_t* a, uint32_t* b);
 	uint32_t *(* get_hash)        (CichlidHash *self);

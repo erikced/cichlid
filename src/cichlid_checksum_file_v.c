@@ -29,7 +29,9 @@
 #include "cichlid_hash.h"
 #include "cichlid_hash_crc32.h"
 #include "cichlid_hash_md5.h"
+#include "cichlid_hash_sha224.h"
 #include "cichlid_hash_sha256.h"
+
 #include "cichlid_marshal.h"
 
 typedef struct

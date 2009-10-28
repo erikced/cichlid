@@ -147,7 +147,7 @@ static GtkTreeModelIface parent_iface;
 static unsigned int signals[N_SIGNALS];
 
 G_DEFINE_TYPE_WITH_CODE(CichlidChecksumFile, cichlid_checksum_file, GTK_TYPE_LIST_STORE,
-						G_IMPLEMENT_INTERFACE (GTK_TYPE_TREE_MODEL, gtk_tree_model_interface_init));
+						G_IMPLEMENT_INTERFACE(GTK_TYPE_TREE_MODEL, gtk_tree_model_interface_init));
 
 /*
  * Initialize the interface

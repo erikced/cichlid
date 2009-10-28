@@ -148,7 +148,7 @@
                 <child>
                   <object class="GtkHBox" id="hbox2">
                     <property name="visible">True</property>
-                    <property name="spacing">6</property>
+                    <property name="spacing">2</property>
                     <child>
                       <object class="GtkToggleButton" id="btn_all">
                         <property name="label" translatable="yes">A_ll</property>
@@ -207,7 +207,18 @@
                       </packing>
                     </child>
                     <child>
-                      <placeholder/>
+                      <object class="GtkEntry" id="search_box">
+                        <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                        <property name="invisible_char">&#x25CF;</property>
+                        <property name="primary_icon_stock">gtk-find</property>
+                        <property name="secondary_icon_stock">gtk-clear</property>
+                        <property name="secondary_icon_activatable">True</property>
+                        <property name="secondary_icon_sensitive">True</property>
+                      </object>
+                      <packing>
+                        <property name="position">4</property>
+                      </packing>
                     </child>
                   </object>
                 </child>
@@ -227,6 +238,7 @@
                 <child>
                   <object class="GtkTreeView" id="tv_files">
                     <property name="visible">True</property>
+                    <property name="headers_visible">False</property>
                     <property name="headers_clickable">False</property>
                     <property name="enable_search">False</property>
                   </object>
@@ -242,7 +254,7 @@
                 <property name="left_padding">6</property>
                 <property name="right_padding">6</property>
                 <child>
-                  <object class="GtkHBox" id="hbox3">
+                  <object class="GtkHBox" id="hbox_progress">
                     <property name="height_request">20</property>
                     <property name="visible">True</property>
                     <property name="resize_mode">immediate</property>

@@ -20,8 +20,16 @@ cichlid_SOURCES = \
 	cichlid_hash_crc32.h \
 	cichlid_hash_md5.c \
 	cichlid_hash_md5.h \
+	cichlid_hash_sha2_32.c \
+	cichlid_hash_sha2_32.h \
+	cichlid_hash_sha224.c \
+	cichlid_hash_sha224.h \
 	cichlid_hash_sha256.c \
 	cichlid_hash_sha256.h \
+	cichlid_hash_sha2_64.c \
+	cichlid_hash_sha2_64.h \
+	cichlid_hash_sha512.c \
+	cichlid_hash_sha512.h \
 	cichlid_main_window.c \
 	cichlid_main_window.h \
 	cichlid_marshal.c \

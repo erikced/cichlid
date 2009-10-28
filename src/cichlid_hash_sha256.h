@@ -24,6 +24,8 @@
 
 #include <glib-object.h>
 #include <stdint.h>
+#include "cichlid_hash.h"
+#include "cichlid_hash_sha2_32.h"
 
 #define CICHLID_TYPE_HASH_SHA256       		(cichlid_hash_sha256_get_type())
 #define CICHLID_HASH_SHA256(obj)       		(G_TYPE_CHECK_INSTANCE_CAST((obj), CICHLID_TYPE_HASH_SHA256, CichlidHashSha256))
@@ -37,19 +39,12 @@ typedef struct _CichlidHashSha256Class   CichlidHashSha256Class;
 
 struct _CichlidHashSha256
 {
-  GObject parent_instance;
-
-  /* Private */
-  uint32_t  h[8];
-  uint8_t   data_left[63];
-  uint8_t   data_left_size;
-  uint64_t  total_size;
-  gboolean  hash_computed;
+  CichlidHashSha2_32 parent_instance;
 };
 
 struct _CichlidHashSha256Class
 {
-  GObjectClass parent_class;
+  CichlidHashSha2_32Class parent_class;
 };
 
 GType cichlid_hash_sha256_get_type(void);
