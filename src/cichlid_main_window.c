@@ -31,7 +31,9 @@
 #include "cichlid_hash_sha256.h"
 
 #define MAIN_UI_SYSTEM PKGDATADIR"/cichlid.ui"
+#define MAIN_UI_WIN32 "cichlid.ui"
 #define MAIN_UI_SOURCE "data/cichlid.ui"
+
 
 enum
 {
@@ -96,6 +98,7 @@ cichlid_main_window_new(GtkTreeModel *model,
 
 	WindowBuilder = gtk_builder_new();
 	if (!gtk_builder_add_from_file(WindowBuilder, MAIN_UI_SOURCE, NULL) &&
+		!gtk_builder_add_from_file(WindowBuilder, MAIN_UI_WIN32, NULL) &&
 		!gtk_builder_add_from_file(WindowBuilder, MAIN_UI_SYSTEM, error))
 	{
 		g_object_unref(WindowBuilder);

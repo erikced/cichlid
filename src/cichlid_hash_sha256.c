@@ -45,13 +45,13 @@ cichlid_hash_interface_init(CichlidHashInterface *iface)
 static void
 cichlid_hash_sha256_dispose(GObject *gobject)
 {
-	G_OBJECT_CLASS (cichlid_hash_sha256_parent_class)->dispose (gobject);
+	G_OBJECT_CLASS(cichlid_hash_sha256_parent_class)->dispose (gobject);
 }
 
 static void
 cichlid_hash_sha256_finalize(GObject *gobject)
 {
-	G_OBJECT_CLASS (cichlid_hash_sha256_parent_class)->finalize (gobject);
+	G_OBJECT_CLASS(cichlid_hash_sha256_parent_class)->finalize (gobject);
 }
 
 static void
