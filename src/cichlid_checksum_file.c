@@ -827,6 +827,13 @@ cichlid_checksum_file_set(CichlidChecksumFile *self, GtkTreeIter *iter, int colu
 	gtk_tree_model_row_changed(GTK_TREE_MODEL(self), path, iter);
 	gtk_tree_path_free (path);
 }
+void cichlid_checksum_file_cancel_verification(CichlidChecksumFile *self)
+{
+	g_return_if_fail(CICHLID_IS_CHECKSUM_FILE(self));
+
+	CichlidChecksumFilePrivate *priv = self->priv;
+	cichlid_checksum_file_verifier_cancel(priv->verifier);
+}
 
 void cichlid_checksum_file_verify(CichlidChecksumFile *self)
 {

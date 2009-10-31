@@ -72,7 +72,7 @@ struct _CichlidChecksumFileClass
 };
 
 GType cichlid_checksum_file_get_type(void);
-
+void  cichlid_checksum_file_cancel_verification(CichlidChecksumFile *self);
 void  cichlid_checksum_file_load_from_cmd(CichlidChecksumFile *self, const char *filename);
 void  cichlid_checksum_file_load(CichlidChecksumFile *self, GFile *checksum_file);
 char *cichlid_checksum_file_get_filename(CichlidChecksumFile *self);

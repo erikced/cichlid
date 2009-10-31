@@ -40,6 +40,7 @@ struct _CichlidChecksumFileVerifier
 	CichlidChecksumFile *checksum_file;
 
 	gboolean             active;
+	volatile int         cancelled;
 
 	uint64_t             total_file_size;
 	uint32_t			 total_file_num;
@@ -47,7 +48,6 @@ struct _CichlidChecksumFileVerifier
     uint32_t             current_file_num;	/* Index of current file */
     char                *current_file;
 
-	volatile int         abort;
 	volatile int		 verified_file_size;
 
 	GMutex              *status_update_lock;
@@ -63,8 +63,8 @@ struct _CichlidChecksumFileVerifierClass
   void (* progress_update) (CichlidChecksumFileVerifier *ver);
 };
 
-#endif /* CICHLID_CHECKSUM_FILE_VERIFIER_H */
-
 CichlidChecksumFileVerifier *cichlid_checksum_file_verifier_new(CichlidChecksumFile *checksum_file);
 gboolean                     cichlid_checksum_file_verifier_start(CichlidChecksumFileVerifier *self, GError **error);
 void                         cichlid_checksum_file_verifier_cancel(CichlidChecksumFileVerifier *self);
+
+#endif /* CICHLID_CHECKSUM_FILE_VERIFIER_H */

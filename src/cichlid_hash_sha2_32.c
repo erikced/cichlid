@@ -249,8 +249,6 @@ cichlid_hash_sha2_32_get_hash_string(CichlidHash *object)
 	if (hash == NULL)
 		return NULL;
 
-	g_debug("Hash size: %u", self->hash_size);
-
 	hash_string = g_malloc(sizeof(char)*(self->hash_size + 1));
 	for (int i = 0; i < self->hash_size/8; ++i)
 		sprintf(hash_string + 8*i, "%.8x", hash[i]);
@@ -266,13 +264,11 @@ cichlid_hash_sha2_32_reinit(CichlidHashSha2_32 *self)
 	if (!self->initialized)
 	{
 		CICHLID_HASH_SHA2_32_GET_CLASS(self)->get_hash_properties(self->h0, &self->hash_size);
-		self->initialized = TRUE;	}
+		self->initialized = TRUE;
+	}
 
 	for (int i = 0; i < 8; ++i)
-	{
 		self->h[i] = self->h0[i];
-		g_debug("h[%i] = %.8x", i, self->h[i]);
-	}
 
 	self->hash_computed = FALSE;
 	self->total_size = 0;

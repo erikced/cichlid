@@ -42,6 +42,7 @@ typedef struct
 
 #define BUFFER_SIZE 1024*512
 #define PROGRESS_UPDATE_INTERVAL 250
+
 /* Macros for creating and freeing status updates */
 #define cichlid_status_update_new() g_slice_alloc(sizeof(StatusUpdate))
 #define cichlid_status_update_free(p_status_update) g_slice_free1(sizeof(StatusUpdate),p_status_update)
@@ -127,6 +128,12 @@ cichlid_checksum_file_verifier_new(CichlidChecksumFile *checksum_file)
 	return obj;
 }
 
+void
+cichlid_checksum_file_verifier_cancel(CichlidChecksumFileVerifier *self)
+{
+	self->cancelled = 1;
+}
+
 gboolean
 cichlid_checksum_file_verifier_start(CichlidChecksumFileVerifier *self, GError **error)
 {
@@ -149,6 +156,7 @@ cichlid_checksum_file_verifier_start(CichlidChecksumFileVerifier *self, GError *
 	}
 
 	self->active = TRUE;
+	self->cancelled = 0;
 	self->current_file = NULL;
 	self->current_file_num = 0;
 	self->total_file_num = 0;
@@ -264,12 +272,9 @@ cichlid_checksum_file_verifier_verify(CichlidChecksumFileVerifier *self)
 					cichlid_hash_update(hashfunc, buf, bytes_read);
 					g_atomic_int_add(&self->verified_file_size, (bytes_read >> 10));
 				}
-				while (bytes_read > 0 && !g_atomic_int_get(&self->abort));
+				while (bytes_read > 0 && !g_atomic_int_get(&self->cancelled));
 
 				checksum = cichlid_hash_get_hash(hashfunc);
-				char *str = cichlid_hash_get_hash_string(hashfunc);
-				g_debug("%s", str);
-				g_free(str);
 			}
 
 			/* Create a status update and add it to the list */
@@ -280,7 +285,7 @@ cichlid_checksum_file_verifier_verify(CichlidChecksumFileVerifier *self)
 				status_update->status = STATUS_GOOD;
 			else if(error != NULL)
 				status_update->status = STATUS_NOT_FOUND;
-			else if(g_atomic_int_get(&self->abort))
+			else if(g_atomic_int_get(&self->cancelled))
 				status_update->status = STATUS_NOT_VERIFIED;
 			else
 				status_update->status = STATUS_BAD;
@@ -313,7 +318,7 @@ cichlid_checksum_file_verifier_verify(CichlidChecksumFileVerifier *self)
 			}
 			g_object_unref(file);
 
-			if (g_atomic_int_get(&self->abort))
+			if (g_atomic_int_get(&self->cancelled))
 				break;
 		}
 		while(gtk_tree_model_iter_next(GTK_TREE_MODEL(self->checksum_file), &iter));
@@ -346,7 +351,7 @@ cichlid_checksum_file_verifier_update_progress(CichlidChecksumFileVerifier *self
 	cur_size = g_atomic_int_get(&self->verified_file_size);
 	progress = cur_size / (double)self->total_file_size;
 	if (speed)
-		speed = 0.5*prev_speed + (cur_size - prev_size)/(2*1000.0);
+		speed = 0.9*prev_speed + (cur_size - prev_size)/(10*1000.0);
 	else
 		speed = (cur_size - prev_size)/1000.0;
 
