@@ -48,7 +48,6 @@ static GtkWidget *filelist;
 static GtkWidget *btn_cancel;
 static GtkWidget *btn_verify;
 static GtkWidget *btn_filter[N_BTNS];
-static GtkWidget *cb_filter;
 static GtkWidget *file_menu_open;
 static GtkWidget *file_menu_quit;
 static GtkWidget *about;
@@ -392,6 +391,9 @@ on_filter_changed(GtkWidget *btn)
 	default:
 		g_assert_not_reached();
 	}
+
+	gtk_tree_model_filter_refilter(GTK_TREE_MODEL_FILTER(gtk_tree_view_get_model
+														 (GTK_TREE_VIEW(filelist))));					   
 }
 
 static void
