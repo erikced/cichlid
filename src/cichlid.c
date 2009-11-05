@@ -36,11 +36,8 @@ enum
 	N_COLUMNS
 };
 
-//GtkListStore *files;
-GtkTreeModel *files_filter;
 GtkTreeModel *files_sort;
 CichlidChecksumFile *cfile;
-static unsigned int filter_flags = (1 << STATUS_GOOD) | (1 << STATUS_BAD) | (1 << STATUS_NOT_VERIFIED) | (1 << STATUS_NOT_FOUND);
 
 int hash_type = HASH_UNKNOWN;
 
@@ -50,53 +47,9 @@ on_main_window_destroy(GtkWidget *widget, gpointer user_data)
 	gtk_main_quit();
 }
 
-
-void
-filelist_change_filter(int option)
-{
-	switch (option)
-	{
-		case 0:
-			filter_flags = (1 << STATUS_GOOD) | (1 << STATUS_BAD) | (1 << STATUS_NOT_VERIFIED) | (1 << STATUS_NOT_FOUND);
-			break;
-		case 1:
-			filter_flags = (1 << STATUS_GOOD);
-			break;
-		case 2:
-			filter_flags = (1 << STATUS_BAD);
-			break;
-		case 3:
-			filter_flags = (1 << STATUS_NOT_FOUND);
-			break;
-	}
-	cichlid_main_window_show_filelist(FALSE);
-	gtk_tree_model_filter_refilter(GTK_TREE_MODEL_FILTER(files_filter));
-	cichlid_main_window_show_filelist(TRUE);
-}
-
 /*
  * Filtering function for filtering out specific results
  */
-gboolean
-filelist_filter_func(GtkTreeModel *model, GtkTreeIter *iter, gpointer user_data)
-{
-	gboolean visible;
-
-	if (filter_flags == ((1 << STATUS_GOOD) | (1 << STATUS_BAD) | (1 << STATUS_NOT_VERIFIED) | (1 << STATUS_NOT_FOUND)))
-		visible = TRUE;
-	else
-	{
-		int status;
-		gtk_tree_model_get(model, iter, CICHLID_CHECKSUM_FILE_STATUS, &status, -1);
-
-		if ((1 << status) & filter_flags)
-			visible = TRUE;
-		else
-			visible = FALSE;
-	}
-
-	return visible;
-}
 
 /**
  * Sort function for sorting the file list by name
@@ -165,15 +118,12 @@ main(int argc, char **argv)
 	/* Initialize the CichlidChecksumFile and the Filter */
 	cfile = g_object_new(CICHLID_TYPE_CHECKSUM_FILE, NULL);
 
-	files_filter = gtk_tree_model_filter_new(GTK_TREE_MODEL(cfile), NULL);
-	gtk_tree_model_filter_set_visible_func(GTK_TREE_MODEL_FILTER(files_filter), filelist_filter_func, NULL, NULL);
-
 	/* Read and parse the file with checksums if possible */
 	if (filename != NULL)
 		cichlid_checksum_file_load_from_cmd(cfile, filename);
 
 	/* Build the UI */
-	cichlid_main_window_new(GTK_TREE_MODEL(files_filter), &error);
+	cichlid_main_window_new(GTK_TREE_MODEL(cfile), &error);
 	if (error == NULL)
 	{
 		gtk_widget_show(cichlid_main_window_get_window());
@@ -186,7 +136,6 @@ main(int argc, char **argv)
 	}
 
 	g_object_unref(cfile);
-	g_object_unref(files_filter);
 
 	return 0;
 }

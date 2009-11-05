@@ -39,6 +39,8 @@ enum
 	N_BTNS
 };			
 
+static uint8_t filter_flags = (1 << STATUS_GOOD) | (1 << STATUS_BAD) | (1 << STATUS_NOT_VERIFIED) | (1 << STATUS_NOT_FOUND);
+
 static gboolean   created = FALSE;
 
 static GtkWidget *main_window;
@@ -84,6 +86,27 @@ GtkWidget *cichlid_main_window_get_window()
 }
 
 gboolean
+filelist_filter_func(GtkTreeModel *model, GtkTreeIter *iter, gpointer user_data)
+{
+	gboolean visible;
+
+	if (filter_flags == ((1 << STATUS_GOOD) | (1 << STATUS_BAD) | (1 << STATUS_NOT_VERIFIED) | (1 << STATUS_NOT_FOUND)))
+		visible = TRUE;
+	else
+	{
+		int status;
+		gtk_tree_model_get(model, iter, CICHLID_CHECKSUM_FILE_STATUS, &status, -1);
+
+		if ((1 << status) & filter_flags)
+			visible = TRUE;
+		else
+			visible = FALSE;
+	}
+
+	return visible;
+}
+
+gboolean
 cichlid_main_window_new(GtkTreeModel *model,
 						GError **error)
 {
@@ -120,8 +143,11 @@ cichlid_main_window_new(GtkTreeModel *model,
 	progress_lbl = GTK_WIDGET(gtk_builder_get_object(WindowBuilder, "lbl_progress"));
 	
 	/* File list */
+	GtkTreeModel *files_filter;
+	files_filter = gtk_tree_model_filter_new(GTK_TREE_MODEL(model), NULL);
+	gtk_tree_model_filter_set_visible_func(GTK_TREE_MODEL_FILTER(files_filter), filelist_filter_func, NULL, NULL);
 	filelist = GTK_WIDGET(gtk_builder_get_object(WindowBuilder,"tv_files"));
-	filelist_init(model);
+	filelist_init(files_filter);
 	g_signal_connect(G_OBJECT(get_checksum_file()), "file-loaded",
 					 G_CALLBACK(on_checksum_file_loaded), NULL);
 	g_signal_connect(G_OBJECT(get_checksum_file()), "verification-progress-update",
@@ -327,8 +353,13 @@ on_file_menu_open_activate(GtkWidget *widget, gpointer user_data)
 static void
 on_filter_changed(GtkWidget *btn)
 {
+	/* Prevent the user from toggling an active button, i.e. deselecting all filter options
+	   as that would not make sense */
 	if (!gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(btn)))
+	{
+		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(btn), TRUE);
 		return;
+	}
 	
 	int selected = -1;
 	for (int i = 0; i < N_BTNS; ++i)
@@ -336,10 +367,31 @@ on_filter_changed(GtkWidget *btn)
 		if (btn == btn_filter[i])
 			selected = i;
 		else
+		{
+			/* Prevent the button executing this function again when toggled */
+			g_signal_handlers_block_by_func(btn_filter[i], on_filter_changed, NULL);
 			gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(btn_filter[i]), FALSE);
+			g_signal_handlers_unblock_by_func(btn_filter[i], on_filter_changed, NULL);
+		}
 	}
 
-	filelist_change_filter(selected);
+	switch (selected)
+	{
+	case 0:
+		filter_flags = (1 << STATUS_GOOD) | (1 << STATUS_BAD) | (1 << STATUS_NOT_VERIFIED) | (1 << STATUS_NOT_FOUND);
+		break;
+	case 1:
+		filter_flags = (1 << STATUS_GOOD);
+		break;
+	case 2:
+		filter_flags = (1 << STATUS_BAD);
+		break;
+	case 3:
+		filter_flags = (1 << STATUS_NOT_FOUND);
+		break;
+	default:
+		g_assert_not_reached();
+	}
 }
 
 static void

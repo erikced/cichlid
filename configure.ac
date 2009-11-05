@@ -24,8 +24,9 @@ AC_CHECK_HEADERS([stdint.h stdlib.h string.h unistd.h])
 AC_C_INLINE
 AC_TYPE_SIZE_T
 AC_TYPE_SSIZE_T
-AC_TYPE_UINT32_T
 AC_TYPE_UINT8_T
+AC_TYPE_UINT32_T
+AC_TYPE_UINT64_T
 
 # Checks for library functions.
 AC_CHECK_FUNCS([strrchr strtoul])
