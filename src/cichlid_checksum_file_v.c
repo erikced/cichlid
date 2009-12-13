@@ -351,7 +351,7 @@ cichlid_checksum_file_verifier_update_progress(CichlidChecksumFileVerifier *self
 	cur_size = g_atomic_int_get(&self->verified_file_size);
 	progress = cur_size / (double)self->total_file_size;
 	if (speed)
-		speed = 0.9*prev_speed + (cur_size - prev_size)/(10*1000.0);
+		speed = 0.95*prev_speed + (cur_size - prev_size)/(20*1000.0);
 	else
 		speed = (cur_size - prev_size)/1000.0;
 

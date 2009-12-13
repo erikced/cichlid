@@ -18,6 +18,7 @@
  */
 #include <glib.h>
 #include <glib/gi18n.h>
+#include <gdk/gdkkeysyms.h>
 #include <gtk/gtk.h>
 #include <gtk/gtkaboutdialog.h>
 
@@ -39,7 +40,8 @@ enum
 	N_BTNS
 };			
 
-static uint8_t filter_flags = (1 << STATUS_GOOD) | (1 << STATUS_BAD) | (1 << STATUS_NOT_VERIFIED) | (1 << STATUS_NOT_FOUND);
+static char    *filter_string = NULL;
+static uint8_t  filter_flags = (1 << STATUS_GOOD) | (1 << STATUS_BAD) | (1 << STATUS_NOT_VERIFIED) | (1 << STATUS_NOT_FOUND);
 
 static gboolean   created = FALSE;
 
@@ -63,19 +65,20 @@ static void filelist_render_status_text(GtkTreeViewColumn *column,
 										GtkTreeIter *iter,
 										gpointer data);
 static CichlidChecksumFile *get_checksum_file();
-static void on_about_activate();
-static void on_cancel_clicked();
-static void on_checksum_file_loaded();
-static void on_file_menu_quit_activate(GtkWidget *widget,
-									   gpointer user_data);
-static void on_file_menu_open_activate(GtkWidget *widget,
-									   gpointer user_data);
-static void on_filter_changed(GtkWidget *btn);
-static void on_verify_clicked();
-static void on_verification_complete();
-static void on_verification_progress_updated();
-static void on_search_box_icon_release(GtkEntry *entry, GtkEntryIconPosition icon_pos);
-static void on_main_window_destroyed();
+static void     on_about_activate();
+static void     on_cancel_clicked();
+static void     on_checksum_file_loaded();
+static void     on_file_menu_quit_activate(GtkWidget *widget,
+										   gpointer user_data);
+static void     on_file_menu_open_activate(GtkWidget *widget,
+										   gpointer user_data);
+static void     on_filter_changed(GtkWidget *btn);
+static void     on_verify_clicked();
+static void     on_verification_complete();
+static void     on_verification_progress_updated();
+static void     on_search_box_icon_release(GtkEntry *entry, GtkEntryIconPosition icon_pos);
+static gboolean on_search_box_key_release(GtkEntry *entry, GdkEventKey *event);
+static void     on_main_window_destroyed();
 
 GtkWidget *cichlid_main_window_get_window()
 {
@@ -89,8 +92,20 @@ filelist_filter_func(GtkTreeModel *model, GtkTreeIter *iter, gpointer user_data)
 {
 	gboolean visible;
 
-	if (filter_flags == ((1 << STATUS_GOOD) | (1 << STATUS_BAD) | (1 << STATUS_NOT_VERIFIED) | (1 << STATUS_NOT_FOUND)))
+	if (filter_flags == ((1 << STATUS_GOOD) | (1 << STATUS_BAD) | (1 << STATUS_NOT_VERIFIED) | (1 << STATUS_NOT_FOUND)) && !filter_string)
 		visible = TRUE;
+	else if (filter_string)
+	{
+		int status;
+		char *filename;
+		gtk_tree_model_get(model, iter, CICHLID_CHECKSUM_FILE_STATUS, &status,
+						   CICHLID_CHECKSUM_FILE_FILENAME, &filename, -1);
+
+		if ((1 << status) & filter_flags && strstr(filename, filter_string))
+			visible = TRUE;
+		else
+			visible = FALSE;
+	}
 	else
 	{
 		int status;
@@ -168,7 +183,10 @@ cichlid_main_window_new(GtkTreeModel *model,
 	/* Search Box */
 	search_box = GTK_WIDGET(gtk_builder_get_object(WindowBuilder, "search_box"));
 	gtk_entry_set_icon_activatable(GTK_ENTRY(search_box), GTK_ENTRY_ICON_PRIMARY, FALSE);
-	g_signal_connect(G_OBJECT(search_box), "icon-release", G_CALLBACK(on_search_box_icon_release), NULL);
+	g_signal_connect(G_OBJECT(search_box), "icon-release",
+					 G_CALLBACK(on_search_box_icon_release), NULL);
+	g_signal_connect(G_OBJECT(search_box), "key-release-event",
+					 G_CALLBACK(on_search_box_key_release), NULL);
 
 	
 	/* Verify button */
@@ -344,6 +362,8 @@ on_file_menu_open_activate(GtkWidget *widget, gpointer user_data)
 		else
 			gtk_window_set_title(GTK_WINDOW(main_window), "cichlid");
 
+		gtk_button_clicked(btn_filter[B_ALL]);
+
 		gdk_cursor_unref(cursor);
 		g_object_unref(file);
 	}
@@ -408,6 +428,19 @@ on_search_box_icon_release(GtkEntry *entry, GtkEntryIconPosition icon_pos)
 {
 	if (icon_pos == GTK_ENTRY_ICON_SECONDARY)
 		gtk_entry_set_text(entry, "");
+}
+
+static gboolean
+on_search_box_key_release(GtkEntry *entry, GdkEventKey *event)
+{
+	/* TODO: Improve by using timeouts */
+	if (filter_string)
+		g_free(filter_string);
+	
+	filter_string = g_strdup(gtk_entry_get_text(entry));
+	gtk_tree_model_filter_refilter(GTK_TREE_MODEL_FILTER(gtk_tree_view_get_model
+														 (GTK_TREE_VIEW(filelist))));					   
+	return TRUE;
 }
 
 
