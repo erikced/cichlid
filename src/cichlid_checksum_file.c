@@ -445,7 +445,7 @@ cichlid_checksum_file_get_extension(const char *filename)
 /**
  * Sets the file type after comparing the name of the GFile and its extension to a a few predefined values.
  * @param the file as a GFile
- * @param returns any error as a GError.
+ * @return returns any error as a GError.
  */
 static void
 cichlid_checksum_file_set_filetype(CichlidChecksumFile *self, GFile *file, GError **error)
