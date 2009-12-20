@@ -36,7 +36,7 @@ typedef enum
   STATUS_GOOD,
   STATUS_NOT_FOUND,
   STATUS_NOT_VERIFIED
-} ck_file_status_t;
+} cichlid_file_status_t;
 
 typedef struct _CichlidFile        CichlidFile;
 typedef struct _CichlidFileClass   CichlidFileClass;
@@ -45,21 +45,18 @@ struct _CichlidFile
 {
 	GObject parent_instance;
 
-	GFile            *file;
-	char             *name;
-	ck_file_status_t  status;
-	gpointer          checksum;
+	gpointer priv;
 };
 
 struct _CichlidFileClass
 {
-  GObjectClass parent_class;
+	GObjectClass parent_class;
 };
 
 GType            cichlid_file_get_type();
 
 CichlidFile      *cichlid_file_new();
-ck_file_status_t  cichlid_file_get_status(CichlidFile *ck_file);
+cichlid_file_status_t  cichlid_file_get_status(CichlidFile *ck_file);
 char             *cichlid_file_get_status_string(CichlidFile *ck_file);
 
 #endif /* CICHLID_FILE_H */

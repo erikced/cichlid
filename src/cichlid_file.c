@@ -20,23 +20,52 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <glib/gi18n.h>
+#include <gio/gio.h>
 
 #include "cichlid_file.h"
 
-G_DEFINE_TYPE(CichlidFile, cichlid_file, G_TYPE_OBJECT);
+typedef struct _CichlidFilePrivate CichlidFilePrivate;
+
+struct _CichlidFilePrivate
+{
+	char             *hash;
+	char             *name;
+	cichlid_file_status_t  status;
+	char             *status_string;
+};
+
+/* Properties */
+enum
+{
+	P_HASH_STRING = 1,
+	P_FILENAME,
+	P_STATUS_STRING,
+	P_STATUS
+};
+
+G_DEFINE_TYPE(CichlidFile, cichlid_file, G_TYPE_OBJECT)
+
+static void cichlid_file_get_property(GObject *object,
+											   guint property_id,
+											   GValue *value,
+											   GParamSpec *pspec);
+static void cichlid_file_set_property(GObject *object,
+											   guint property_id,
+											   const GValue *value,
+											   GParamSpec *pspec);
+
 
 static void
 cichlid_file_dispose(GObject *gobject)
 {
 	CichlidFile *self = CICHLID_FILE(gobject);
+	CichlidFilePrivate *priv = self->priv;
 
-	g_object_unref(self->file);
+	if (priv->name)
+		g_free(priv->name);
 
-	if (self->name)
-		g_free(self->name);
-
-	if (self->checksum)
-		g_free(self->checksum);
+	if (priv->hash)
+		g_free(priv->hash);
 
 	/* Chain up to the parent class */
 	G_OBJECT_CLASS(cichlid_file_parent_class)->dispose(gobject);
@@ -55,18 +84,41 @@ static void
 cichlid_file_class_init(CichlidFileClass *klass)
 {
 	GObjectClass *gobject_class = G_OBJECT_CLASS(klass);
+
+	g_type_class_add_private(klass, sizeof(CichlidFilePrivate));
+	
 	gobject_class->dispose = cichlid_file_dispose;
 	gobject_class->finalize = cichlid_file_finalize;
+
+	gobject_class->get_property = cichlid_file_get_property;
+	gobject_class->set_property = cichlid_file_set_property;
+
+	g_object_class_install_property(gobject_class, P_HASH_STRING,
+									g_param_spec_string("hash-string", NULL, "Hash String",
+														NULL, G_PARAM_READABLE | G_PARAM_CONSTRUCT_ONLY));
+
+	g_object_class_install_property(gobject_class, P_FILENAME,
+									g_param_spec_string("filename", NULL, "Filename",
+														NULL, G_PARAM_READABLE));
+
+	g_object_class_install_property(gobject_class, P_STATUS_STRING,
+									g_param_spec_string("status-string", NULL, "Status string",
+														NULL, G_PARAM_READABLE));
+
+	g_object_class_install_property(gobject_class, P_STATUS,
+									g_param_spec_string("status", NULL, "Status",
+														NULL, G_PARAM_READWRITE));
 }
 
 static void
 cichlid_file_init(CichlidFile *self)
 {
+	CichlidFilePrivate *priv = self->priv;
 	/* Initiera variabler */
-	self->file = NULL;
-	self->name = NULL;
-	self->status = STATUS_NOT_VERIFIED;
-	self->checksum = NULL;
+	priv->name = NULL;
+	priv->hash = NULL;
+	priv->status = STATUS_NOT_VERIFIED;
+	priv->status_string = NULL;
 }
 
 CichlidFile *
@@ -82,9 +134,10 @@ char *
 cichlid_file_get_status_string(CichlidFile *self)
 {
 	g_return_val_if_fail(CICHLID_IS_FILE(self), NULL);
+	CichlidFilePrivate *priv = self->priv;
 	char *status_text;
 
-	switch (self->status)
+	switch (priv->status)
 	{
 		case STATUS_GOOD:
 			status_text = _("Ok");
@@ -103,4 +156,45 @@ cichlid_file_get_status_string(CichlidFile *self)
 	}
 
 	return status_text;
+}
+
+static void
+cichlid_file_get_property(GObject *object, guint property_id, GValue *value, GParamSpec *pspec)
+{
+	CichlidFile        *self = CICHLID_FILE(object);
+	CichlidFilePrivate *priv = self->priv;
+
+	switch(property_id)
+	{
+	case P_HASH_STRING:
+		g_value_set_string(value, priv->hash);
+		break;
+	case P_FILENAME:
+		g_value_set_string(value, NULL);
+		break;
+	case P_STATUS_STRING:
+		g_value_set_string(value, priv->status_string);
+		break;
+	case P_STATUS:
+		g_value_set_int(value, priv->status);
+		break;
+	default:
+		G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
+	}
+}
+
+static void
+cichlid_file_set_property(GObject *object, guint property_id, const GValue *value, GParamSpec *pspec)
+{
+	CichlidFile        *self = CICHLID_FILE(object);
+	CichlidFilePrivate *priv = self->priv;
+
+	switch(property_id)
+	{
+	case P_STATUS:
+		priv->status = g_value_get_int(value);
+		break;
+	default:
+		G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
+	}
 }
