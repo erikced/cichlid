@@ -32,10 +32,11 @@
 
 typedef enum
 {
-  STATUS_BAD = 0,
+  STATUS_BAD = 1,
   STATUS_GOOD,
   STATUS_NOT_FOUND,
-  STATUS_NOT_VERIFIED
+  STATUS_NOT_VERIFIED,
+  N_STATUS
 } cichlid_file_status_t;
 
 typedef struct _CichlidFile        CichlidFile;
@@ -57,6 +58,6 @@ GType            cichlid_file_get_type();
 
 CichlidFile      *cichlid_file_new();
 cichlid_file_status_t  cichlid_file_get_status(CichlidFile *ck_file);
-char             *cichlid_file_get_status_string(CichlidFile *ck_file);
+const char       *cichlid_file_get_status_string(CichlidFile *ck_file);
 
 #endif /* CICHLID_FILE_H */

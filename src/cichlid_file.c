@@ -45,6 +45,7 @@ enum
 
 G_DEFINE_TYPE(CichlidFile, cichlid_file, G_TYPE_OBJECT)
 
+void        cichlid_file_set_status(CichlidFile *self, cichlid_file_status_t status);
 static void cichlid_file_get_property(GObject *object,
 											   guint property_id,
 											   GValue *value,
@@ -130,34 +131,6 @@ cichlid_file_new()
 	return obj;
 }
 
-char *
-cichlid_file_get_status_string(CichlidFile *self)
-{
-	g_return_val_if_fail(CICHLID_IS_FILE(self), NULL);
-	CichlidFilePrivate *priv = self->priv;
-	char *status_text;
-
-	switch (priv->status)
-	{
-		case STATUS_GOOD:
-			status_text = _("Ok");
-			break;
-		case STATUS_BAD:
-			status_text = _("Corrupt");
-			break;
-		case STATUS_NOT_VERIFIED:
-			status_text = _("Not verified");
-			break;
-		case STATUS_NOT_FOUND:
-			status_text = _("Missing");
-			break;
-		default:
-			g_assert_not_reached();
-	}
-
-	return status_text;
-}
-
 static void
 cichlid_file_get_property(GObject *object, guint property_id, GValue *value, GParamSpec *pspec)
 {
@@ -192,9 +165,62 @@ cichlid_file_set_property(GObject *object, guint property_id, const GValue *valu
 	switch(property_id)
 	{
 	case P_STATUS:
-		priv->status = g_value_get_int(value);
+		cichlid_file_set_status(self, g_value_get_int(value));
 		break;
 	default:
 		G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
 	}
+}
+
+cichlid_file_status_t
+cichlid_file_get_status(CichlidFile *self)
+{
+	g_return_val_if_fail(CICHLID_IS_FILE(self), 0);;
+	CichlidFilePrivate *priv = self->priv;
+
+	return priv->status;
+}
+
+void
+cichlid_file_set_status(CichlidFile *self, cichlid_file_status_t status)
+{
+	g_return_if_fail(CICHLID_IS_FILE(self));
+	if (status == 0 || status >= N_STATUS)
+	{
+		g_warning("Incorrect status number %i. Number must be 0 < status < %i",status,N_STATUS);
+		return;
+	}
+
+	CichlidFilePrivate *priv = self->priv;
+	priv->status = status;
+
+	if (priv->status_string)
+		g_free(priv->status_string);
+	
+	switch (status)
+	{
+		case STATUS_GOOD:
+			priv->status_string = _("Ok");
+			break;
+		case STATUS_BAD:
+			priv->status_string = _("Corrupt");
+			break;
+		case STATUS_NOT_VERIFIED:
+			priv->status_string = _("Not verified");
+			break;
+		case STATUS_NOT_FOUND:
+			priv->status_string = _("Missing");
+			break;
+		default:
+			g_assert_not_reached();
+	}
+}
+
+const char *
+cichlid_file_get_status_string(CichlidFile *self)
+{
+	g_return_val_if_fail(CICHLID_IS_FILE(self), NULL);
+	CichlidFilePrivate *priv = self->priv;
+
+	return (const char *)priv->status_string;
 }
