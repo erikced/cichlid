@@ -1,4 +1,4 @@
-/*
+3/*
  * Copyright © 2010 Erik Cederberg <erikced@gmail.com>
  *
  * cichlid - cichlid.vala

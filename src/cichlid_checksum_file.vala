@@ -1,5 +1,5 @@
 /*
- * Copyright © 2008-2010 Erik Cederberg <erikced@gmail.com>
+ * Copyright © 2010 Erik Cederberg <erikced@gmail.com>
  *
  * cichlid - cichlid_checksum_file.vala
  *
@@ -17,31 +17,41 @@
  * along with cichlid.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-enum HashType {
-	UNKNOWN,
-	CRC32,
-	MD5,
-	SHA1,
-	SHA224,
-	SHA256,
-	SHA384,
-	SHA512
-}
+namespace Cichlid {
 
-public Cichlid.ChecksumFile : Gtk.ListStore {
-	private Cichlid.Verifier *verifier;
-	private HashType cs_type;
-
-	/* Signals */
-	public signal void file_loaded();
-	public signal void verification_progress_update(double progress, double speed);
-	public signal void verification_complete();
+	enum HashType {
+		UNKNOWN,
+		CRC32,
+		MD5,
+		SHA1,
+		SHA224,
+		SHA256,
+		SHA384,
+		SHA512
+	}
 	
-	private void on_verifier_progress_update(double progress, double speed, Cichlid.Verifier verifier) {
+	public Cichlid.ChecksumFile : Gtk.ListStore {
+		private Cichlid.Verifier *verifier;
+		private HashType cs_type;
 		
-	}
+		/* Signals */
+		public signal void file_loaded();
+		public signal void verification_progress_update(double progress, double speed);
+		public signal void verification_complete();
+		
+		private void on_verifier_progress_update(double progress, double speed, Cichlid.Verifier verifier) {
+			
+		}
+		
+		public ChecksumFile() {
+			GLib.Type types[] = { GLib.Object };
+			set_column_types (types);
+			
+		}
 
-	public ChecksumFile() {
+		private GLType get_column_tyoe(int column) {
+			GTy
+		}
 	}
+	
 }
-
