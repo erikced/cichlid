@@ -1,4 +1,4 @@
-3/*
+/*
  * Copyright © 2010 Erik Cederberg <erikced@gmail.com>
  *
  * cichlid - cichlid.vala
@@ -41,14 +41,11 @@ namespace Cichlid {
 			return 0;
 		}
 		
-		public Cichlid() {
-			stdout.printf("Ät en fisk\n");
-		}
+		public Cichlid() {}
 		
 		public Cichlid.with_file(string filename) {
 //		this.current_file = filename;
 //		Cichlid.ChecksumFile.load_from_cmd(filename);
-			this();
 		}
 	}
 }

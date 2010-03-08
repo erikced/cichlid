@@ -31,8 +31,9 @@ namespace Cichlid {
 	}
 	
 	public Cichlid.ChecksumFile : Gtk.ListStore {
-		private Cichlid.Verifier *verifier;
+		//private Cichlid.Verifier *verifier;
 		private HashType cs_type;
+		private Glib.File file;
 		
 		/* Signals */
 		public signal void file_loaded();
@@ -49,8 +50,9 @@ namespace Cichlid {
 			
 		}
 
-		private GLType get_column_tyoe(int column) {
-			GTy
+		private GLib.Type get_column_type(int column) {
+			GLib.Type types[] = { GLib.String, GLib.int }
+			return types[column];
 		}
 	}
 	
