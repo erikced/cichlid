@@ -57,7 +57,10 @@ struct _CichlidFileClass
 GType            cichlid_file_get_type();
 
 CichlidFile      *cichlid_file_new();
+GFile            *cichlid_file_get_file(CichlidFile *ck_file);
+const gchar      *cichlid_file_get_filename(CichlidFile *ck_file);
 cichlid_file_status_t  cichlid_file_get_status(CichlidFile *ck_file);
 const char       *cichlid_file_get_status_string(CichlidFile *ck_file);
+void              cichlid_file_set_status(CichlidFile *self, cichlid_file_status_t status);
 
 #endif /* CICHLID_FILE_H */

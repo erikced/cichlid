@@ -43,7 +43,7 @@ enum
 	PAD_SMALL = 3
 };
 
-G_DEFINE_TYPE(CichlidCellRenderer, cichlid_cell_renderer, GTK_TYPE_CELL_RENDERER);
+G_DEFINE_TYPE(CichlidCellRenderer, cichlid_cell_renderer, GTK_TYPE_CELL_RENDERER)
 
 static void cichlid_cell_renderer_get_property(GObject    *object,
 		                                       guint       property_id,
@@ -126,12 +126,14 @@ cichlid_cell_renderer_get_size(GtkCellRenderer  * cell,
 	CichlidCellRendererPrivate *priv = self->priv;
 	GdkRectangle name_area;
 	GdkRectangle status_area;
-	char *status;
+	const char *filename;
+	const char *status;
 	int w, h;
 
 	status = cichlid_file_get_status_string(priv->ck_file);
+	filename = cichlid_file_get_filename(priv->ck_file);
 
-	g_object_set(priv->text_renderer, "text", priv->ck_file->name, "scale", 1.0, "ellipsize", PANGO_ELLIPSIZE_NONE, NULL);
+	g_object_set(priv->text_renderer, "text", filename, "scale", 1.0, "ellipsize", PANGO_ELLIPSIZE_NONE, NULL);
 	gtk_cell_renderer_get_size(priv->text_renderer, widget, NULL, NULL, NULL, &w, &h);
 	name_area.width = w;
 	name_area.height = h;
@@ -261,12 +263,14 @@ cichlid_cell_renderer_render(GtkCellRenderer       *cell,
     GdkRectangle                fill_area = *background_area;
 	GdkRectangle name_area;
 	GdkRectangle status_area;
-	char *status;
+	const char *status;	
+	const char *filename;
 	int w, h;
 
 	status = cichlid_file_get_status_string(priv->ck_file);
+	filename = cichlid_file_get_filename(priv->ck_file);
 
-	g_object_set(priv->text_renderer, "text", priv->ck_file->name, "scale", 1.0, "ellipsize", PANGO_ELLIPSIZE_NONE, NULL);
+	g_object_set(priv->text_renderer, "text", filename, "scale", 1.0, "ellipsize", PANGO_ELLIPSIZE_NONE, NULL);
 	gtk_cell_renderer_get_size(priv->text_renderer, widget, NULL, NULL, NULL, &w, &h);
 	name_area.width = w;
 	name_area.height = h;
@@ -286,7 +290,7 @@ cichlid_cell_renderer_render(GtkCellRenderer       *cell,
     status_area.x = name_area.x + name_area.width + PAD;
 	status_area.y = fill_area.y + PAD_SMALL;
 
-    g_object_set(priv->text_renderer, "text", priv->ck_file->name, "scale", 1.0, "ellipsize", PANGO_ELLIPSIZE_END, NULL);
+    g_object_set(priv->text_renderer, "text", filename, "scale", 1.0, "ellipsize", PANGO_ELLIPSIZE_END, NULL);
     gtk_cell_renderer_render(priv->text_renderer, window, widget, &name_area, &name_area, &name_area, flags);
     g_object_set(priv->text_renderer, "text", status, "scale", 1.0, NULL);
     gtk_cell_renderer_render(priv->text_renderer, window, widget, &status_area, &status_area, &status_area, flags);

@@ -260,14 +260,14 @@ filelist_render_status_text(GtkTreeViewColumn *column,
 {
 	GValue value = { 0, };
 	CichlidFile *ck_file;
-	char *status;
+	const char *status;
 
 	gtk_tree_model_get_value(model, iter, CICHLID_CHECKSUM_FILE_FILE, &value);
 	ck_file = g_value_get_object(&value);
 	g_value_unset(&value);
 
 	status = cichlid_file_get_status_string(ck_file);
-	if (ck_file->status == STATUS_BAD)
+	if (cichlid_file_get_status(ck_file) == STATUS_BAD)
 		g_object_set(renderer, "text", status, "foreground", "red", NULL);
 	else
 		g_object_set(renderer, "text", status, "foreground", NULL, NULL);
@@ -362,7 +362,7 @@ on_file_menu_open_activate(GtkWidget *widget, gpointer user_data)
 		else
 			gtk_window_set_title(GTK_WINDOW(main_window), "cichlid");
 
-		gtk_button_clicked(btn_filter[B_ALL]);
+		gtk_button_clicked(GTK_BUTTON(btn_filter[B_ALL]));
 
 		gdk_cursor_unref(cursor);
 		g_object_unref(file);

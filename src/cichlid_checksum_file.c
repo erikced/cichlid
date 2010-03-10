@@ -147,7 +147,7 @@ static GtkTreeModelIface parent_iface;
 static unsigned int signals[N_SIGNALS];
 
 G_DEFINE_TYPE_WITH_CODE(CichlidChecksumFile, cichlid_checksum_file, GTK_TYPE_LIST_STORE,
-						G_IMPLEMENT_INTERFACE(GTK_TYPE_TREE_MODEL, gtk_tree_model_interface_init));
+						G_IMPLEMENT_INTERFACE(GTK_TYPE_TREE_MODEL, gtk_tree_model_interface_init))
 
 /*
  * Initialize the interface
@@ -342,16 +342,17 @@ cichlid_checksum_file_get_value(GtkTreeModel *self, GtkTreeIter *iter, int colum
         switch (column)
         {
         case FILENAME_COLUMN:
-        	g_value_set_string(value, ck_file->name);
+        	g_value_set_string(value, cichlid_file_get_filename(ck_file));
         	break;
         case STATUS_COLUMN:
-        	g_value_set_int(value, ck_file->status);
+        	g_value_set_int(value, cichlid_file_get_status(ck_file));
         	break;
         case GFILE_COLUMN:
-        	g_value_set_object(value, ck_file->file);
+        	g_value_set_object(value, cichlid_file_get_file(ck_file));
         	break;
         case CHECKSUM_COLUMN:
-        	g_value_set_pointer(value, (gpointer)ck_file->checksum);
+			/* TODO */
+        	g_value_set_pointer(value, NULL);
         	break;
         case FILE_COLUMN:
         	g_value_set_object(value, ck_file);
@@ -722,7 +723,7 @@ cichlid_checksum_file_queue_file(CichlidChecksumFile *self, const char *filename
 	char *name;
 	char *rel_path;
 	char *file_path;
-	ck_file_status_t status;
+	cichlid_file_status_t status;
 	gboolean exists;
 
 	g_return_if_fail(CICHLID_IS_CHECKSUM_FILE(self));
@@ -744,11 +745,8 @@ cichlid_checksum_file_queue_file(CichlidChecksumFile *self, const char *filename
 	else
 		status = STATUS_NOT_FOUND;
 
-	f = cichlid_file_new();
-	f->file = file;
-	f->name = name;
-	f->status = status;
-	f->checksum = checksum;
+	f = cichlid_file_new(file, checksum);
+	cichlid_file_set_status(f, status);
 
 	g_mutex_lock(priv->file_queue_lock);
 	g_queue_push_tail(priv->file_queue, f);
@@ -804,17 +802,12 @@ cichlid_checksum_file_set(CichlidChecksumFile *self, GtkTreeIter *iter, int colu
 	switch (column)
 	{
 	case FILENAME_COLUMN:
-		if (f->name != NULL)
-			g_free(f->name);
-		f->name = g_strdup(g_value_get_string(value));
-		break;
+		g_error("File name cannot be changed.");
 	case STATUS_COLUMN:
-		f->status = g_value_get_int(value);
+		cichlid_file_set_status(f, g_value_get_int(value));
 		break;
 	case GFILE_COLUMN:
-		if (f->file != NULL)
-			g_object_unref(f->file);
-		f->file = G_FILE(g_value_get_object(value));
+		g_error("GFile cannot be changed.");
 		break;
 	case CHECKSUM_COLUMN:
 		g_error("Checksum cannot be updated");
