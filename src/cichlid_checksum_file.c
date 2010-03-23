@@ -123,7 +123,7 @@ static void        cichlid_checksum_file_queue_file(CichlidChecksumFile *self,
 													const char   *base_path,
 													gconstpointer checksum);
 static inline void cichlid_checksum_file_read_checksum(CichlidChecksumFile *self,
-													   uint32_t            *checksum,
+													  char                 *checksum,
 													   const char          *checksum_start);
 static void        cichlid_checksum_file_set_property(GObject      *object,
 		                                              guint         property_id,
@@ -187,7 +187,7 @@ cichlid_checksum_file_dispose(GObject *gobject)
 static void
 cichlid_checksum_file_finalize(GObject *gobject)
 {
-	CichlidChecksumFile *self = CICHLID_CHECKSUM_FILE(gobject);
+	//	CichlidChecksumFile *self = CICHLID_CHECKSUM_FILE(gobject);
 
 	G_OBJECT_CLASS(cichlid_checksum_file_parent_class)->finalize(gobject);
 }
@@ -295,7 +295,7 @@ cichlid_checksum_file_get_column_type(GtkTreeModel *self, int column)
 		G_TYPE_STRING,
 		G_TYPE_INT,
 		G_TYPE_OBJECT,
-		G_TYPE_POINTER,
+		G_TYPE_STRING,
 		CICHLID_TYPE_FILE
 	};
 
@@ -351,8 +351,7 @@ cichlid_checksum_file_get_value(GtkTreeModel *self, GtkTreeIter *iter, int colum
         	g_value_set_object(value, cichlid_file_get_file(ck_file));
         	break;
         case CHECKSUM_COLUMN:
-			/* TODO */
-        	g_value_set_pointer(value, NULL);
+        	g_value_set_string(value, cichlid_file_get_hash_string(ck_file));
         	break;
         case FILE_COLUMN:
         	g_value_set_object(value, ck_file);
@@ -595,13 +594,13 @@ cichlid_checksum_file_parse(CichlidChecksumFile *self)
 	GFileInputStream *filestream;
 	GDataInputStream *datastream;
 	char *read_line,
-	     *checksum_start, /* Start of the checksum in the read line */
-	     *filename_start, /* Start of the filename in the read line */
-	     *base_path,
-	     *filename;
+		 *checksum_start, /* Start of the checksum in the read line */
+		 *filename_start, /* Start of the filename in the read line */
+		 *base_path,
+		 *filename,
+		 *checksum;
 	size_t line_length,
 	       filename_length;
-	gpointer checksum;
 
 	g_return_if_fail(CICHLID_IS_CHECKSUM_FILE(self));
 
@@ -667,7 +666,7 @@ cichlid_checksum_file_parse(CichlidChecksumFile *self)
 		filename[filename_length] = '\0';
 
 		/* Do the same for the checksum */
-		checksum = g_malloc(sizeof(char)*priv->cs_length/2);
+		checksum = g_malloc(sizeof(char)*(priv->cs_length+1));
 		cichlid_checksum_file_read_checksum(self, checksum, checksum_start);
 
 		/* Add the file to the list */
@@ -696,18 +695,21 @@ cichlid_checksum_file_parse(CichlidChecksumFile *self)
  * Reads the checksum from checksum_start and stores it as an array of unsigned 32-bit integers
  */
 static inline void
-cichlid_checksum_file_read_checksum(CichlidChecksumFile *self, uint32_t *checksum, const char *checksum_start)
+cichlid_checksum_file_read_checksum(CichlidChecksumFile *self, char *checksum, const char *checksum_start)
 {
 	g_return_if_fail(CICHLID_IS_CHECKSUM_FILE(self));
 	CichlidChecksumFilePrivate *priv = self->priv;
-	char num[9];
 
-	num[8] = '\0';
+	strncpy(checksum, checksum_start, priv->cs_length);
+	checksum[priv->cs_length] = '\0';
+	/*	char num[9];
+
+		num[8] = '\0';
 	for (int i = 0; i < priv->cs_length/8; i++)
 	{
 		memcpy(num, checksum_start + 8*i, 8);
 		checksum[i] = strtoul(num, NULL, 16);
-	}
+		}*/
 }
 
 /*
@@ -718,13 +720,10 @@ cichlid_checksum_file_queue_file(CichlidChecksumFile *self, const char *filename
 {
 	GFile *file;
 	GFile *folder;
-	GFileInfo *info;
 	CichlidFile *f;
-	char *name;
 	char *rel_path;
 	char *file_path;
 	cichlid_file_status_t status;
-	gboolean exists;
 
 	g_return_if_fail(CICHLID_IS_CHECKSUM_FILE(self));
 	g_return_if_fail(filename != NULL);
@@ -738,7 +737,6 @@ cichlid_checksum_file_queue_file(CichlidChecksumFile *self, const char *filename
 	
 	folder = g_file_get_parent(priv->file);
 	rel_path = g_file_get_relative_path(folder, file);
-	name = g_filename_to_utf8(rel_path, -1, NULL, NULL, NULL);
 
 	if (g_file_query_exists(file, NULL))
 		status = STATUS_NOT_VERIFIED;
@@ -803,6 +801,7 @@ cichlid_checksum_file_set(CichlidChecksumFile *self, GtkTreeIter *iter, int colu
 	{
 	case FILENAME_COLUMN:
 		g_error("File name cannot be changed.");
+		break;
 	case STATUS_COLUMN:
 		cichlid_file_set_status(f, g_value_get_int(value));
 		break;
@@ -811,7 +810,7 @@ cichlid_checksum_file_set(CichlidChecksumFile *self, GtkTreeIter *iter, int colu
 		break;
 	case CHECKSUM_COLUMN:
 		g_error("Checksum cannot be updated");
-
+		break;
 	default:
 		g_assert_not_reached();
 	}

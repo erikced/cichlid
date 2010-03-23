@@ -227,8 +227,8 @@ cichlid_checksum_file_verifier_verify(CichlidChecksumFileVerifier *self)
 	char             *buf;
 	char             *filename;
 	hash_t			  cs_type;
-	uint32_t         *checksum;
-	uint32_t         *precalculated_checksum;
+	char             *checksum;
+	char             *precalculated_checksum;
 	ssize_t           bytes_read;
 
 	g_return_if_fail(CICHLID_IS_CHECKSUM_FILE_VERIFIER(self));
@@ -274,21 +274,22 @@ cichlid_checksum_file_verifier_verify(CichlidChecksumFileVerifier *self)
 				}
 				while (bytes_read > 0 && !g_atomic_int_get(&self->cancelled));
 
-				checksum = cichlid_hash_get_hash(hashfunc);
+				checksum = cichlid_hash_get_hash_string(hashfunc);
 			}
 
 			/* Create a status update and add it to the list */
 			status_update = cichlid_status_update_new();
 			status_update->iter = iter;
 
-			if (cichlid_hash_equals(hashfunc, checksum, precalculated_checksum))
+			if (checksum != NULL && strcmp(checksum, precalculated_checksum) == 0) {
 				status_update->status = STATUS_GOOD;
-			else if(error != NULL)
+			} else if(error != NULL)
 				status_update->status = STATUS_NOT_FOUND;
 			else if(g_atomic_int_get(&self->cancelled))
 				status_update->status = STATUS_NOT_VERIFIED;
-			else
+			else {
 				status_update->status = STATUS_BAD;
+			}
 
 			g_mutex_lock(self->status_update_lock);
 			self->status_updates = g_list_prepend(self->status_updates,status_update);
@@ -345,7 +346,7 @@ cichlid_checksum_file_verifier_update_progress(CichlidChecksumFileVerifier *self
 	static double prev_speed = 0;
 	static int prev_size = 0;
 	double progress;
-	double speed;
+	double speed = 0;
 	int cur_size;
 
 	cur_size = g_atomic_int_get(&self->verified_file_size);

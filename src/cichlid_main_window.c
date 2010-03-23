@@ -434,12 +434,12 @@ static gboolean
 on_search_box_key_release(GtkEntry *entry, GdkEventKey *event)
 {
 	/* TODO: Improve by using timeouts */
-	if (filter_string)
-		g_free(filter_string);
+//	if (filter_string)
+//		g_free(filter_string);
 	
-	filter_string = g_strdup(gtk_entry_get_text(entry));
-	gtk_tree_model_filter_refilter(GTK_TREE_MODEL_FILTER(gtk_tree_view_get_model
-														 (GTK_TREE_VIEW(filelist))));					   
+//	filter_string = g_strdup(gtk_entry_get_text(entry));
+//	gtk_tree_model_filter_refilter(GTK_TREE_MODEL_FILTER(gtk_tree_view_get_model
+//														 (GTK_TREE_VIEW(filelist))));
 	return TRUE;
 }
 

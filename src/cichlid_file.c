@@ -21,6 +21,7 @@
 #include <glib-object.h>
 #include <glib/gi18n.h>
 #include <gio/gio.h>
+#include <stdint.h>
 
 #include "cichlid_file.h"
 
@@ -28,9 +29,9 @@ typedef struct _CichlidFilePrivate CichlidFilePrivate;
 
 struct _CichlidFilePrivate
 {
-	GFile            *file;
-	char             *hash;
-	const char       *name;
+	GFile *file;
+	char  *hash;
+	char  *name;
 	cichlid_file_status_t  status;
 };
 
@@ -66,6 +67,9 @@ cichlid_file_dispose(GObject *gobject)
 	if (priv->hash)
 		g_free(priv->hash);
 
+	if (priv->name)
+		g_free(priv->name);
+
 	/* Chain up to the parent class */
 	G_OBJECT_CLASS(cichlid_file_parent_class)->dispose(gobject);
 }
@@ -91,8 +95,8 @@ cichlid_file_class_init(CichlidFileClass *klass)
 	gobject_class->set_property = cichlid_file_set_property;
 
 	g_object_class_install_property(gobject_class, P_FILE,
-									g_param_spec_string("file", NULL, "GFile",
-														NULL, G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY));
+									g_param_spec_object("file", NULL, "GFile",
+														G_TYPE_FILE, G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY));
 	
 	g_object_class_install_property(gobject_class, P_HASH_STRING,
 									g_param_spec_string("hash-string", NULL, "Hash String",
@@ -107,14 +111,15 @@ cichlid_file_class_init(CichlidFileClass *klass)
 														NULL, G_PARAM_READABLE));
 
 	g_object_class_install_property(gobject_class, P_STATUS,
-									g_param_spec_string("status", NULL, "Status",
-														NULL, G_PARAM_READWRITE));
+									g_param_spec_int("status", NULL, "Status",
+													 0, N_STATUS-1, 0, G_PARAM_READWRITE));
 }
 
 static void
 cichlid_file_init(CichlidFile *self)
 {
-	CichlidFilePrivate *priv = self->priv;
+	CichlidFilePrivate *priv = self->priv = G_TYPE_INSTANCE_GET_PRIVATE(self, CICHLID_TYPE_FILE, CichlidFilePrivate);
+
 	/* Initiera variabler */
 	priv->file = NULL;
 	priv->name = NULL;
@@ -124,8 +129,8 @@ cichlid_file_init(CichlidFile *self)
 
 CichlidFile *
 cichlid_file_new(GFile *file, char *hash)
-{
-	return g_object_new(CICHLID_TYPE_FILE, "file", file, NULL);
+{	
+	return g_object_new(CICHLID_TYPE_FILE, "file", file, "hash-string", hash, NULL);
 }
 
 static void
@@ -140,13 +145,13 @@ cichlid_file_get_property(GObject *object, guint property_id, GValue *value, GPa
 		g_value_set_object(value, priv->file);
 		break;
 	case P_HASH_STRING:
-		g_value_set_string(value, priv->hash);
+		g_value_set_string(value, cichlid_file_get_hash_string(self));
 		break;
 	case P_FILENAME:
 		g_value_set_string(value, NULL);
 		break;
 	case P_STATUS_STRING:
-		g_value_set_string(value, cichlid_file_get_status_string(self));
+		g_value_set_static_string(value, cichlid_file_get_status_string(self));
 		break;
 	case P_STATUS:
 		g_value_set_int(value, priv->status);
@@ -161,17 +166,29 @@ cichlid_file_get_file(CichlidFile *self)
 {
 	g_return_val_if_fail(CICHLID_IS_FILE(self), NULL);
 	CichlidFilePrivate *priv = self->priv;
-	
+
+	g_assert(priv->file != NULL);
 	return priv->file;	
 }
 
-const gchar *
+const char *
 cichlid_file_get_filename(CichlidFile *self)
 {
 	g_return_val_if_fail(CICHLID_IS_FILE(self), NULL);
 	CichlidFilePrivate *priv = self->priv;
-	
+
+	g_assert(priv->name != NULL);	
 	return priv->name;
+}
+
+const char *
+cichlid_file_get_hash_string(CichlidFile *self)
+{
+	g_return_val_if_fail(CICHLID_IS_FILE(self), NULL);
+	CichlidFilePrivate *priv = self->priv;
+
+	g_assert(priv->hash != NULL);
+	return priv->hash;
 }
 
 cichlid_file_status_t
@@ -179,7 +196,7 @@ cichlid_file_get_status(CichlidFile *self)
 {
 	g_return_val_if_fail(CICHLID_IS_FILE(self), 0);
 	CichlidFilePrivate *priv = self->priv;
-
+	
 	return priv->status;
 }
 
@@ -216,11 +233,15 @@ static void
 cichlid_file_set_property(GObject *object, guint property_id, const GValue *value, GParamSpec *pspec)
 {
 	CichlidFile        *self = CICHLID_FILE(object);
-
+	CichlidFilePrivate *priv = self->priv;
+		
 	switch(property_id)
 	{
 	case P_FILE:
 		cichlid_file_set_file(self, G_FILE(g_value_get_object(value)));
+		break;
+	case P_HASH_STRING:
+		priv->hash = g_value_dup_string(value);
 		break;
 	case P_STATUS:
 		cichlid_file_set_status(self, g_value_get_int(value));
@@ -235,7 +256,6 @@ cichlid_file_set_file(CichlidFile *self, GFile *file)
 {
 	g_return_if_fail(CICHLID_IS_FILE(self));
 	g_return_if_fail(file != NULL);
-	g_return_if_fail(g_file_query_exists(file, NULL));
 	CichlidFilePrivate *priv = self->priv;
 
 	priv->file = file;
@@ -243,8 +263,16 @@ cichlid_file_set_file(CichlidFile *self, GFile *file)
 	
 	GFileInfo *info = g_file_query_info(file, G_FILE_ATTRIBUTE_STANDARD_DISPLAY_NAME, G_FILE_QUERY_INFO_NONE, NULL, NULL);
 	if (info != NULL)
-		priv->name = g_file_info_get_attribute_string(info, G_FILE_ATTRIBUTE_STANDARD_DISPLAY_NAME);
-	g_object_unref(info);
+	{
+		priv->name = g_strdup(g_file_info_get_attribute_string(info, G_FILE_ATTRIBUTE_STANDARD_DISPLAY_NAME));
+		g_object_unref(info);
+	}
+	else
+	{
+		char *tmpname = g_file_get_basename(file);
+		priv->name = g_filename_to_utf8(tmpname, -1, NULL, NULL, NULL);
+		g_free(tmpname);
+	}
 }
 
 void
