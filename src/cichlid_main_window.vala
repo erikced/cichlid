@@ -37,9 +37,9 @@ namespace Cichlid {
 		Gtk.Button    btn_cancel;
 		Gtk.Button    btn_verify;
 		Gtk.Button[]  btn_filter;
-		Gtk.Action    file_menu_open;
-		Gtk.Action    file_menu_quit;
-		Gtk.Action    about;
+		Gtk.MenuItem    file_menu_open;
+		Gtk.MenuItem    file_menu_quit;
+		Gtk.MenuItem    about;
 		Gtk.HBox      progress_hbox;
 		Gtk.ProgressBar    progress;
 		Gtk.Widget    progress_lbl;
@@ -74,11 +74,8 @@ namespace Cichlid {
 			/* Filter buttons */
 			btn_filter = new Gtk.Button[FilterButton.NUM];
 			btn_filter[FilterButton.ALL] = builder.get_object ("btn_all") as Gtk.Button;
-
 			btn_filter[FilterButton.OK] = builder.get_object ("btn_ok") as Gtk.Button;
-
 			btn_filter[FilterButton.CORRUPT] = builder.get_object ("btn_corrupt") as Gtk.Button;
-
 			btn_filter[FilterButton.MISSING] = builder.get_object ("btn_missing") as Gtk.Button;
 
 			/* Search box */
@@ -93,12 +90,12 @@ namespace Cichlid {
 			btn_cancel = builder.get_object ("btn_cancel") as Gtk.Button;
 
 			/* Menu */
-			file_menu_open = builder.get_object ("file_menu_open") as Gtk.Action;			
-			file_menu_quit = builder.get_object ("file_menu_quit") as Gtk.Action;
+			file_menu_open = builder.get_object ("file_menu_open") as Gtk.MenuItem;			
+			file_menu_quit = builder.get_object ("file_menu_quit") as Gtk.MenuItem;
 			file_menu_quit.activate.connect (() => {
 					Gtk.main_quit();
-				});
-			about = builder.get_object ("about") as Gtk.Action;
+					});
+			about = builder.get_object ("about") as Gtk.MenuItem;
 		}
 
 		public void show_all () {

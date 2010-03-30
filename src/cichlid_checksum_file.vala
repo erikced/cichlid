@@ -30,29 +30,56 @@ namespace Cichlid {
 		SHA512
 	}
 	
-	public Cichlid.ChecksumFile : Gtk.ListStore {
-		//private Cichlid.Verifier *verifier;
-		private HashType cs_type;
-		private Glib.File file;
+	public class ChecksumFile : Gtk.ListStore, Gtk.TreeModel {
+		private Verifier m_verifier;
+		private HashType m_cs_type;
+		private GLib.File m_file;
 		
 		/* Signals */
 		public signal void file_loaded();
-		public signal void verification_progress_update(double progress, double speed);
+		public signal void verification_progress_update( double progress, double speed );
 		public signal void verification_complete();
 		
-		private void on_verifier_progress_update(double progress, double speed, Cichlid.Verifier verifier) {
+		private void on_verifier_progress_update( double progress, double speed, Verifier verifier ) {
 			
 		}
 		
-		public ChecksumFile() {
-			GLib.Type types[] = { GLib.Object };
-			set_column_types (types);
-			
+		public ChecksumFile (GLib.File file) {
+			GLib.Type[] types = { typeof(GLib.Object) };
+			set_column_types( types );
+			m_file = file;
+			GLib.Idle.add (load_file, Priority.DEFAULT_IDLE);
 		}
 
-		private GLib.Type get_column_type(int column) {
-			GLib.Type types[] = { GLib.String, GLib.int }
+		private bool load_file () {
+			stdout.printf("Load File...\n");
+			return false;
+		}
+
+		public GLib.Type get_column_type (int column) {
+			GLib.Type[] types = { typeof(string), typeof(int), typeof(int) };
 			return types[column];
+		}
+
+		private int get_object (Gtk.TreeIter iter) {
+			GLib.Value value;
+			base.get_value (iter, 1, out value);
+			return 1;
+		}
+
+		public void get_value (Gtk.TreeIter iter, int column, out GLib.Value value) {
+			value.init (get_column_type(column));
+
+			switch (column) {
+			case 0:
+				value.set_string ("Lala");
+				break;
+			case 1:
+				value.set_int (1);
+				break;
+			default:
+				GLib.assert_not_reached ();
+			}
 		}
 	}
 	
