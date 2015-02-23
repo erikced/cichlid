@@ -1,9 +1,7 @@
 /*
- * Copyright © 2009 Erik Cederberg <erikced@gmail.com>
+ * Copyright © 2015 Erik Cederberg <erikced@gmail.com>
  *
  * cichlid - cichlid_hash_common.h
- *
- * Common functions for CichlidHash*
  *
  * cichlid is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2009 Erik Cederberg <erikced@gmail.com>
+ * Copyright © 2012015 Erik Cederberg <erikced@gmail.com>
  *
  * cichlid - cichlid_hash_crc32.h
  *
@@ -20,33 +20,20 @@
 #ifndef CICHLID_HASH_CRC32_H
 #define CICHLID_HASH_CRC32_H
 
-#include <glib-object.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
-#define CICHLID_TYPE_HASH_CRC32       		(cichlid_hash_crc32_get_type ())
-#define CICHLID_HASH_CRC32(obj)       		(G_TYPE_CHECK_INSTANCE_CAST ((obj), CICHLID_TYPE_HASH_CRC32, CichlidHashCrc32))
-#define CICHLID_IS_HASH_CRC32(obj)			(G_TYPE_CHECK_INSTANCE_TYPE ((obj), CICHLID_TYPE_HASH_CRC32))
-#define CICHLID_HASH_CRC32_CLASS(klass)	(G_TYPE_CHECK_CLASS_CAST ((klass), CICHLID_TYPE_HASH_CRC32, CichlidHashCrc32Class))
-#define CICHLID_IS_HASH_CRC32_CLASS(klass)	(G_TYPE_CHECK_CLASS_TYPE ((klass), CICHLID_TYPE_HASH_CRC32))
-#define CICHLID_HASH_CRC32_GET_CLASS(obj)	(G_TYPE_INSTANCE_GET_CLASS ((obj), CICHLID_TYPE_HASH_CRC32, CichlidHashCrc32Class))
-
-typedef struct _CichlidHashCrc32        CichlidHashCrc32;
-typedef struct _CichlidHashCrc32Class   CichlidHashCrc32Class;
-
+typedef struct _CichlidHashCrc32 CichlidHashCrc32;
 struct _CichlidHashCrc32
 {
-  GObject parent_instance;
-
-  gboolean hash_computed;
-  uint32_t hash;
+    bool hash_computed;
+    uint32_t hash;
 };
 
-struct _CichlidHashCrc32Class
-{
-  GObjectClass parent_class;
-};
-
-GType cichlid_hash_crc32_get_type (void);
-
-CichlidHash* cichlid_hash_crc32_new();
+void cichlid_hash_crc32_init(CichlidHashCrc32 *self);
+void cichlid_hash_crc32_update(CichlidHashCrc32 *self, const char *data, size_t data_size);
+uint32_t *cichlid_hash_crc32_get_hash(CichlidHashCrc32 *self);
+char *cichlid_hash_crc32_get_hash_string(CichlidHashCrc32 *self);
 
 #endif /* CICHLID_HASH_CRC32_H */

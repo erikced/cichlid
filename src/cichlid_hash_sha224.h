@@ -1,5 +1,5 @@
 /*
- * Copyright © 2009 Erik Cederberg <erikced@gmail.com>
+ * Copyright © 2015 Erik Cederberg <erikced@gmail.com>
  *
  * cichlid - cichlid_hash_sha224.h
  *
@@ -22,33 +22,15 @@
 #ifndef CICHLID_HASH_SHA224_H
 #define CICHLID_HASH_SHA224_H
 
-#include <glib-object.h>
-
-#include "cichlid_hash.h"
 #include "cichlid_hash_sha2_32.h"
+#include <stddef.h>
+#include <stdint.h>
 
-#define CICHLID_TYPE_HASH_SHA224       		(cichlid_hash_sha224_get_type())
-#define CICHLID_HASH_SHA224(obj)       		(G_TYPE_CHECK_INSTANCE_CAST((obj), CICHLID_TYPE_HASH_SHA224, CichlidHashSha224))
-#define CICHLID_IS_HASH_SHA224(obj)			(G_TYPE_CHECK_INSTANCE_TYPE((obj), CICHLID_TYPE_HASH_SHA224))
-#define CICHLID_HASH_SHA224_CLASS(klass)	(G_TYPE_CHECK_CLASS_CAST((klass), CICHLID_TYPE_HASH_SHA224, CichlidHashSha224Class))
-#define CICHLID_IS_HASH_SHA224_CLASS(klass)	(G_TYPE_CHECK_CLASS_TYPE((klass), CICHLID_TYPE_HASH_SHA224))
-#define CICHLID_HASH_SHA224_GET_CLASS(obj)	(G_TYPE_INSTANCE_GET_CLASS((obj), CICHLID_TYPE_HASH_SHA224, CichlidHashSha224Class))
+typedef CichlidHashSha2_32 CichlidHashSha224;
 
-typedef struct _CichlidHashSha224        CichlidHashSha224;
-typedef struct _CichlidHashSha224Class   CichlidHashSha224Class;
-
-struct _CichlidHashSha224
-{
-	CichlidHashSha2_32 parent_instance;
-};
-
-struct _CichlidHashSha224Class
-{
-	CichlidHashSha2_32Class parent_class;
-};
-
-GType cichlid_hash_sha224_get_type(void);
-
-CichlidHash* cichlid_hash_sha224_new();
+void cichlid_hash_sha224_init(CichlidHashSha224 *self);
+void cichlid_hash_sha224_update(CichlidHashSha224 *self, const char *data, size_t data_size);
+uint32_t *cichlid_hash_sha224_get_hash(CichlidHashSha224 *self);
+char *cichlid_hash_sha224_get_hash_string(CichlidHashSha224 *self);
 
 #endif /* CICHLID_HASH_SHA224_H */

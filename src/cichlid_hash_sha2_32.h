@@ -1,5 +1,5 @@
 /*
- * Copyright © 2009 Erik Cederberg <erikced@gmail.com>
+ * Copyright © 2015 Erik Cederberg <erikced@gmail.com>
  *
  * cichlid - cichlid_hash_sha2_32.h
  *
@@ -23,42 +23,29 @@
 #ifndef CICHLID_HASH_SHA2_32_H
 #define CICHLID_HASH_SHA2_32_H
 
-#include <glib-object.h>
+#include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
-#define CICHLID_TYPE_HASH_SHA2_32       		(cichlid_hash_sha2_32_get_type())
-#define CICHLID_HASH_SHA2_32(obj)       		(G_TYPE_CHECK_INSTANCE_CAST((obj), CICHLID_TYPE_HASH_SHA2_32, CichlidHashSha2_32))
-#define CICHLID_IS_HASH_SHA2_32(obj)			(G_TYPE_CHECK_INSTANCE_TYPE((obj), CICHLID_TYPE_HASH_SHA2_32))
-#define CICHLID_HASH_SHA2_32_CLASS(klass)	(G_TYPE_CHECK_CLASS_CAST((klass), CICHLID_TYPE_HASH_SHA2_32, CichlidHashSha2_32Class))
-#define CICHLID_IS_HASH_SHA2_32_CLASS(klass)	(G_TYPE_CHECK_CLASS_TYPE((klass), CICHLID_TYPE_HASH_SHA2_32))
-#define CICHLID_HASH_SHA2_32_GET_CLASS(obj)	(G_TYPE_INSTANCE_GET_CLASS((obj), CICHLID_TYPE_HASH_SHA2_32, CichlidHashSha2_32Class))
+#define CICHLID_HASH_SHA2_32_HASH_SIZE (64)
+#define CICHLID_HASH_SHA2_32_WORD_SIZE (8)
+#define CICHLID_HASH_SHA2_32_N_WORDS (CICHLID_HASH_SHA2_32_HASH_SIZE / CICHLID_HASH_SHA2_32_WORD_SIZE)
 
-typedef struct _CichlidHashSha2_32        CichlidHashSha2_32;
-typedef struct _CichlidHashSha2_32Class   CichlidHashSha2_32Class;
-
-struct _CichlidHashSha2_32
+typedef struct CichlidHashSha2_32_ CichlidHashSha2_32;
+struct CichlidHashSha2_32_
 {
-	GObject parent_instance;
-
-	/* Private */
-	uint8_t  data_left[63];
-	uint8_t  data_left_size;
-	uint32_t h[8];
-	uint32_t h0[8];
-	gboolean hash_computed;
-	uint8_t  hash_size;
-	uint8_t  hash_type;
-	gboolean initialized; 
-	uint64_t total_size;
+    uint8_t  data_left[63];
+    uint8_t  data_left_size;
+    uint32_t h[CICHLID_HASH_SHA2_32_N_WORDS];
+    uint32_t h0[CICHLID_HASH_SHA2_32_N_WORDS];
+    bool hash_computed;
+    uint32_t hash_size;
+    uint64_t total_size;
 };
 
-struct _CichlidHashSha2_32Class
-{
-	GObjectClass parent_class;
-
-	void (* get_hash_properties) (uint32_t *h0, uint32_t* hash_length);
-};
-
-GType cichlid_hash_sha2_32_get_type(void);
+void cichlid_hash_sha2_32_init(CichlidHashSha2_32 *self, const uint32_t *h0, uint32_t hash_length);
+void cichlid_hash_sha2_32_update(CichlidHashSha2_32 *self, const char *data, size_t data_size);
+uint32_t *cichlid_hash_sha2_32_get_hash(CichlidHashSha2_32 *self);
+char *cichlid_hash_sha2_32_get_hash_string(CichlidHashSha2_32 *self);
 
 #endif /* CICHLID_HASH_SHA2_32_H */

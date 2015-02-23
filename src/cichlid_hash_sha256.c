@@ -1,5 +1,5 @@
 /*
- * Copyright © 2009 Erik Cederberg <erikced@gmail.com>
+ * Copyright © 2015 Erik Cederberg <erikced@gmail.com>
  *
  * cichlid - cichlid_hash_sha256.c
  *
@@ -18,86 +18,36 @@
  * You should have received a copy of the GNU General Public License
  * along with cichlid.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include <gio/gio.h>
-#include <glib.h>
+#include "cichlid_hash_sha256.h"
+#include "cichlid_hash_sha2_32.h"
+
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
-#include "cichlid_hash.h"
-#include "cichlid_hash_sha256.h"
+#define SHA256_HASH_LENGTH (64)
 
-#define SHA256_HASH_LENGTH 64
+static uint32_t h0[8] = {
+    0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19
+};
 
-static void     cichlid_hash_interface_init(CichlidHashInterface *iface);
-static gboolean cichlid_hash_sha256_equals(uint32_t *a, uint32_t *b);
-static void     cichlid_hash_sha256_get_hash_properties(uint32_t *h0, uint32_t *hash_length);
-
-G_DEFINE_TYPE_WITH_CODE(CichlidHashSha256, cichlid_hash_sha256, CICHLID_TYPE_HASH_SHA2_32,
-						G_IMPLEMENT_INTERFACE(CICHLID_TYPE_HASH, cichlid_hash_interface_init));
-
-static void
-cichlid_hash_interface_init(CichlidHashInterface *iface)
+void cichlid_hash_sha256_init(CichlidHashSha256 *self)
 {
-	iface->equals = cichlid_hash_sha256_equals;
+    cichlid_hash_sha2_32_init(self, h0, SHA256_HASH_LENGTH);
 }
 
-static void
-cichlid_hash_sha256_dispose(GObject *gobject)
+void cichlid_hash_sha256_update(CichlidHashSha256 *self, const char *data, size_t data_size)
 {
-	G_OBJECT_CLASS(cichlid_hash_sha256_parent_class)->dispose (gobject);
+    cichlid_hash_sha2_32_update(self, data, data_size);
 }
 
-static void
-cichlid_hash_sha256_finalize(GObject *gobject)
+uint32_t *cichlid_hash_sha256_get_hash(CichlidHashSha256 *self)
 {
-	G_OBJECT_CLASS(cichlid_hash_sha256_parent_class)->finalize (gobject);
+    return cichlid_hash_sha2_32_get_hash(self);
 }
 
-static void
-cichlid_hash_sha256_class_init(CichlidHashSha256Class *klass)
+char *cichlid_hash_sha256_get_hash_string(CichlidHashSha256 *self)
 {
-	GObjectClass *gobject_class = G_OBJECT_CLASS(klass);
-	gobject_class->dispose = cichlid_hash_sha256_dispose;
-	gobject_class->finalize = cichlid_hash_sha256_finalize;
-
-	CichlidHashSha2_32Class *sha2_class = CICHLID_HASH_SHA2_32_CLASS(klass);
-	sha2_class->get_hash_properties = cichlid_hash_sha256_get_hash_properties;
+    return cichlid_hash_sha2_32_get_hash_string(self);
 }
 
-static void
-cichlid_hash_sha256_init(CichlidHashSha256 *self)
-{ }
-
-CichlidHash *
-cichlid_hash_sha256_new()
-{
-	CichlidHashSha256 *_ccalc;
-	_ccalc = g_object_new(CICHLID_TYPE_HASH_SHA256, NULL);
-
-	return CICHLID_HASH(_ccalc);
-}
-
-static gboolean
-cichlid_hash_sha256_equals(uint32_t *a, uint32_t *b)
-{
-	if (memcmp(a, b, SHA256_HASH_LENGTH/2) == 0)
-		return TRUE;
-	else
-		return FALSE;
-}
-
-static void
-cichlid_hash_sha256_get_hash_properties(uint32_t *h0, uint32_t *hash_length) 
-{
-	h0[0] = 0x6a09e667;
-	h0[1] = 0xbb67ae85;
-	h0[2] = 0x3c6ef372;
-	h0[3] = 0xa54ff53a;
-	h0[4] = 0x510e527f;
-	h0[5] = 0x9b05688c;
-	h0[6] = 0x1f83d9ab;
-	h0[7] = 0x5be0cd19;
-
-	*hash_length = SHA256_HASH_LENGTH;
-}
