@@ -30,7 +30,6 @@ typedef CichlidHashSha2_32 CichlidHashSha256;
 
 void cichlid_hash_sha256_init(CichlidHashSha256 *self);
 void cichlid_hash_sha256_update(CichlidHashSha256 *self, const char *data, size_t data_size);
-uint32_t *cichlid_hash_sha256_get_hash(CichlidHashSha256 *self);
-char *cichlid_hash_sha256_get_hash_string(CichlidHashSha256 *self);
+char *cichlid_hash_sha256_get_hash(CichlidHashSha256 *self);
 
 #endif /* CICHLID_HASH_SHA256_H */

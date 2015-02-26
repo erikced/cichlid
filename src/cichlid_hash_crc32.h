@@ -33,7 +33,6 @@ struct _CichlidHashCrc32
 
 void cichlid_hash_crc32_init(CichlidHashCrc32 *self);
 void cichlid_hash_crc32_update(CichlidHashCrc32 *self, const char *data, size_t data_size);
-uint32_t *cichlid_hash_crc32_get_hash(CichlidHashCrc32 *self);
-char *cichlid_hash_crc32_get_hash_string(CichlidHashCrc32 *self);
+char *cichlid_hash_crc32_get_hash(CichlidHashCrc32 *self);
 
 #endif /* CICHLID_HASH_CRC32_H */

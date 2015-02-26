@@ -48,16 +48,16 @@ static int compute_checksum(const char *filename)
         }
 
         printf("Hashes of \"%s\"\n", filename);
-        char *hash_string = cichlid_hash_crc32_get_hash_string(&crc32);
+        char *hash_string = cichlid_hash_crc32_get_hash(&crc32);
         printf(" CRC32: %s\n", hash_string);
         free(hash_string);
-        hash_string = cichlid_hash_md5_get_hash_string(&md5);
+        hash_string = cichlid_hash_md5_get_hash(&md5);
         printf("   MD5: %s\n", hash_string);
         free(hash_string);
-        hash_string = cichlid_hash_sha224_get_hash_string(&sha224);
+        hash_string = cichlid_hash_sha224_get_hash(&sha224);
         printf("SHA224: %s\n", hash_string);
         free(hash_string);
-        hash_string = cichlid_hash_sha256_get_hash_string(&sha256);
+        hash_string = cichlid_hash_sha256_get_hash(&sha256);
         printf("SHA256: %s\n", hash_string);
         free(hash_string);
     }

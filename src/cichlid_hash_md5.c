@@ -29,6 +29,7 @@
 #include <string.h>
 
 static void cichlid_hash_md5_calc(CichlidHashMd5 *self, const char *buf, size_t bytes_read);
+static void cichlid_hash_md5_finalize(CichlidHashMd5 *self);
 
 static const uint32_t shift_lookup_table[64] = {
     0x07, 0x0C, 0x11, 0x16, 0x07, 0x0C, 0x11, 0x16,
@@ -100,69 +101,18 @@ void cichlid_hash_md5_update(CichlidHashMd5 *self, const char *data, size_t data
     }
 }
 
-/*
- * Returns the resulting hash as an array of integers
- * @param object
- * @return an array of for uint32_t* if successful, else NULL.
- */
-uint32_t *cichlid_hash_md5_get_hash(CichlidHashMd5 *self)
+char *cichlid_hash_md5_get_hash(CichlidHashMd5 *self)
 {
-    char     buf[128];
-    size_t   size_offset;
-    uint32_t *hash;
-
-    memset(buf, 0, sizeof(buf));
-    if (!self->hash_computed) {
-        if (self->data_left_size < 56) {
-            size_offset = 56;
-        } else {
-            size_offset = 64 + 56;
-        }
-
-        /* Copy the data that is left, the ending 1 and the size to the buffer */
-        memcpy(buf, self->data_left, self->data_left_size);
-        buf[self->data_left_size] = -0x80; /* Signed char */
-        self->total_size = self->total_size * 8; /* Convert size to bits */
-        memcpy(buf + size_offset, &self->total_size, 8);
-
-        cichlid_hash_md5_calc(self, buf, size_offset + 8);
-        self->hash_computed = true;
-    }
-
-    /* Copy the hash and convert answer from big to little-endian */
-    hash = malloc(4 * sizeof(*hash));
-    CHANGE_ENDIANNESS(hash, self->h, 4);
-
-    return hash;
-}
-
-/*
- * Returns the resulting hash as a byte string
- * @param object
- * @return a NULL-terminated string with the checksum if successful, else NULL.
- */
-char *cichlid_hash_md5_get_hash_string(CichlidHashMd5 *self)
-{
+    uint32_t hash[4];
     char *hash_string;
-    uint32_t *hash;
 
-    hash = cichlid_hash_md5_get_hash(self);
-    if (hash == NULL) {
-        return NULL;
-    }
-
-    hash_string = calloc(33, sizeof(char));
+    cichlid_hash_md5_finalize(self);
+    CHANGE_ENDIANNESS(hash, self->h, 4);
+    hash_string = malloc(sizeof(*hash_string) * 33);
     snprintf(hash_string, 33, "%.8x%.8x%.8x%.8x", hash[0], hash[1], hash[2], hash[3]);
-
-    free(hash);
     return hash_string;
 }
 
-/*
- * Calculates the partial checksum for buf
- * @param buf data buffer
- * @param bytes_read size of data buffer
- */
 static void cichlid_hash_md5_calc(CichlidHashMd5 *self, const char *buf, size_t bytes_read)
 {
     uint32_t a, b, c, d, f, g, tmp, *w;
@@ -204,6 +154,30 @@ static void cichlid_hash_md5_calc(CichlidHashMd5 *self, const char *buf, size_t 
         self->h[1] += b;
         self->h[2] += c;
         self->h[3] += d;
+    }
+}
+
+static void cichlid_hash_md5_finalize(CichlidHashMd5 *self)
+{
+    char     buf[128];
+    size_t   size_offset;
+
+    memset(buf, 0, sizeof(buf));
+    if (!self->hash_computed) {
+        if (self->data_left_size < 56) {
+            size_offset = 56;
+        } else {
+            size_offset = 64 + 56;
+        }
+
+        /* Copy the data that is left, the ending 1 and the size to the buffer */
+        memcpy(buf, self->data_left, self->data_left_size);
+        buf[self->data_left_size] = -0x80; /* Signed char */
+        self->total_size = self->total_size * 8; /* Convert size to bits */
+        memcpy(buf + size_offset, &self->total_size, 8);
+
+        cichlid_hash_md5_calc(self, buf, size_offset + 8);
+        self->hash_computed = true;
     }
 }
 

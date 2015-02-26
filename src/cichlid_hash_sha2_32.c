@@ -145,44 +145,17 @@ static void cichlid_hash_sha2_32_final(CichlidHashSha2_32 *self)
     }
 }
 
-/**
- * Returns the resulting hash as an array of integers
- * @param object
- * @return an array of for uint32_t* if successful, else NULL.
- */
-uint32_t *cichlid_hash_sha2_32_get_hash(CichlidHashSha2_32 *self)
+char *cichlid_hash_sha2_32_get_hash(CichlidHashSha2_32 *self)
 {
-    uint32_t *hash;
+    char     *hash_string;
 
     cichlid_hash_sha2_32_final(self);
 
-    hash = malloc(sizeof(uint32_t) * self->hash_size / 8);
-    memcpy(hash, self->h, self->hash_size/2);
-
-    return hash;
-}
-
-/**
- * Returns the resulting hash as a byte string
- * @param object
- * @return a NULL-terminated string with the checksum if successful, else NULL.
- */
-char *cichlid_hash_sha2_32_get_hash_string(CichlidHashSha2_32 *self)
-{
-    uint32_t *hash;
-    char     *hash_string;
-
-    hash = cichlid_hash_sha2_32_get_hash(self);
-    if (hash == NULL) {
-        return NULL;
-    }
-
     hash_string = malloc(sizeof(char) * (self->hash_size + 1));
     for (int i = 0; i < self->hash_size / 8; ++i) {
-        sprintf(hash_string + 8 * i, "%.8x", hash[i]);
+        sprintf(hash_string + 8 * i, "%.8x", self->h[i]);
     }
 
-    free(hash);
     return hash_string;
 }
 

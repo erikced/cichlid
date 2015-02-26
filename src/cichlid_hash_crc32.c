@@ -84,44 +84,17 @@ void cichlid_hash_crc32_update(CichlidHashCrc32 *self, const char *data, size_t 
     }
 }
 
-/*
- * Returns the resulting hash as an array of integers
- * @param object
- * @return an array of uint32_t if successful, else NULL.
- */
-uint32_t *cichlid_hash_crc32_get_hash(CichlidHashCrc32 *self)
+char *cichlid_hash_crc32_get_hash(CichlidHashCrc32 *self)
 {
-    uint32_t *hash;
+    char *hash_string;
 
     if (!self->hash_computed) {
         self->hash_computed = true;
     }
 
-    hash = malloc(sizeof(*hash));
-    *hash = ~self->hash;
-
-    return hash;
-}
-
-/*
- * Returns the resulting hash as a byte string
- * @param object
- * @return a NULL-terminated string with the checksum if successful, else NULL.
- */
-char *cichlid_hash_crc32_get_hash_string(CichlidHashCrc32 *self)
-{
-    char *hash_string;
-    uint32_t *hash;
-
-    hash = cichlid_hash_crc32_get_hash(self);
-    if (hash == NULL) {
-        return NULL;
-    }
-
     hash_string = malloc(sizeof(char) * 9);
-    sprintf(hash_string, "%.8x", *hash);
+    sprintf(hash_string, "%.8x", ~(self->hash));
 
-    free(hash);
     return hash_string;
 }
 

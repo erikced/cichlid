@@ -41,13 +41,8 @@ void cichlid_hash_sha224_update(CichlidHashSha224 *self, const char *data, size_
     cichlid_hash_sha2_32_update(self, data, data_size);
 }
 
-uint32_t *cichlid_hash_sha224_get_hash(CichlidHashSha224 *self)
+char *cichlid_hash_sha224_get_hash(CichlidHashSha224 *self)
 {
     return cichlid_hash_sha2_32_get_hash(self);
-}
-
-char *cichlid_hash_sha224_get_hash_string(CichlidHashSha224 *self)
-{
-    return cichlid_hash_sha2_32_get_hash_string(self);
 }
 

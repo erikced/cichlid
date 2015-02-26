@@ -41,13 +41,8 @@ void cichlid_hash_sha256_update(CichlidHashSha256 *self, const char *data, size_
     cichlid_hash_sha2_32_update(self, data, data_size);
 }
 
-uint32_t *cichlid_hash_sha256_get_hash(CichlidHashSha256 *self)
+char *cichlid_hash_sha256_get_hash(CichlidHashSha256 *self)
 {
     return cichlid_hash_sha2_32_get_hash(self);
-}
-
-char *cichlid_hash_sha256_get_hash_string(CichlidHashSha256 *self)
-{
-    return cichlid_hash_sha2_32_get_hash_string(self);
 }
 
