@@ -2,6 +2,7 @@
 #include "cichlid_hash_md5.h"
 #include "cichlid_hash_sha224.h"
 #include "cichlid_hash_sha256.h"
+#include "cichlid_hash_sha512.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -38,6 +39,8 @@ static int compute_checksum(const char *filename)
         cichlid_hash_sha224_init(&sha224);
         CichlidHashSha256 sha256;
         cichlid_hash_sha256_init(&sha256);
+        CichlidHashSha512 sha512;
+        cichlid_hash_sha512_init(&sha512);
 
         while (!feof(fid)) {
             size_t read_elems = fread(buf, sizeof(*buf), sizeof(buf), fid);
@@ -45,6 +48,7 @@ static int compute_checksum(const char *filename)
             cichlid_hash_md5_update(&md5, buf, read_elems);
             cichlid_hash_sha224_update(&sha224, buf, read_elems);
             cichlid_hash_sha256_update(&sha256, buf, read_elems);
+            cichlid_hash_sha512_update(&sha512, buf, read_elems);
         }
 
         printf("Hashes of \"%s\"\n", filename);
@@ -59,6 +63,9 @@ static int compute_checksum(const char *filename)
         free(hash_string);
         hash_string = cichlid_hash_sha256_get_hash(&sha256);
         printf("SHA256: %s\n", hash_string);
+        free(hash_string);
+        hash_string = cichlid_hash_sha512_get_hash(&sha512);
+        printf("SHA512: %s\n", hash_string);
         free(hash_string);
     }
     return rv;
