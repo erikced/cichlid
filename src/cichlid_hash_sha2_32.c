@@ -70,7 +70,7 @@ static void cichlid_hash_sha2_32_calc(CichlidHashSha2_32 *self, const char *data
 
     /* Process data in 512-bit chunks */
     for (int j = 0; j < bytes_read/64; j++) {
-        CHANGE_ENDIANNESS(w, (uint32_t*)(data+j*64), 16);
+        cichlid_change_endianness_32(w, (uint32_t *)&data[j * 64], 16);
 
         /* Extend w to contain 64 uint32_t */
         for (int i = 16; i < 64; i++) {
@@ -118,7 +118,6 @@ static void cichlid_hash_sha2_32_final(CichlidHashSha2_32 *self)
 {
     char      buf[sizeof(char) * 64 * 2] = { 0,};
     size_t    size_offset;
-    uint32_t  tmp;
     char     *total_size_p;
 
     if (!self->hash_computed) {
@@ -134,11 +133,8 @@ static void cichlid_hash_sha2_32_final(CichlidHashSha2_32 *self)
         self->total_size = self->total_size * 8; /* Convert size to bits */
 
         total_size_p = (char *)&self->total_size;
-        memcpy(&tmp, total_size_p + 4, 4);
-        CHANGE_ENDIANNESS((uint32_t *)&buf[size_offset], &tmp, 1);
-        memcpy(&tmp, total_size_p, 4);
-        CHANGE_ENDIANNESS((uint32_t *)&buf[size_offset + 4], &tmp, 1);
-
+        cichlid_change_endianness_32((uint32_t *)&buf[size_offset], (uint32_t *)(total_size_p + 4), 1);
+        cichlid_change_endianness_32((uint32_t *)&buf[size_offset + 4], (uint32_t *)(total_size_p), 1);
         cichlid_hash_sha2_32_calc(self, buf, size_offset + 8);
 
         self->hash_computed = true;
@@ -225,7 +221,7 @@ static inline uint32_t Maj(uint32_t x, uint32_t y, uint32_t z)
  */
 static inline uint32_t Sigma0(uint32_t x)
 {
-    return ROTATE_RIGHT(x, 2) ^ ROTATE_RIGHT(x, 13) ^ ROTATE_RIGHT(x, 22);
+    return cichlid_rotate_right_32(x, 2) ^ cichlid_rotate_right_32(x, 13) ^ cichlid_rotate_right_32(x, 22);
 }
 
 /**
@@ -235,7 +231,7 @@ static inline uint32_t Sigma0(uint32_t x)
  */
 static inline uint32_t Sigma1(uint32_t x)
 {
-    return ROTATE_RIGHT(x, 6) ^ ROTATE_RIGHT(x, 11) ^ ROTATE_RIGHT(x, 25);
+    return cichlid_rotate_right_32(x, 6) ^ cichlid_rotate_right_32(x, 11) ^ cichlid_rotate_right_32(x, 25);
 }
 
 /**
@@ -245,7 +241,7 @@ static inline uint32_t Sigma1(uint32_t x)
  */
 static inline uint32_t sigma0(uint32_t x)
 {
-    return ROTATE_RIGHT(x, 7) ^ ROTATE_RIGHT(x, 18) ^ (x >> 3);
+    return cichlid_rotate_right_32(x, 7) ^ cichlid_rotate_right_32(x, 18) ^ (x >> 3);
 }
 
 /**
@@ -255,5 +251,5 @@ static inline uint32_t sigma0(uint32_t x)
  */
 static inline uint32_t sigma1(uint32_t x)
 {
-    return ROTATE_RIGHT(x, 17) ^ ROTATE_RIGHT(x, 19) ^ (x >> 10);
+    return cichlid_rotate_right_32(x, 17) ^ cichlid_rotate_right_32(x, 19) ^ (x >> 10);
 }

@@ -20,36 +20,48 @@
 #ifndef CICHLID_HASH_COMMON_H
 #define CICHLID_HASH_COMMON_H
 
-#define CHANGE_ENDIANNESS(dest, src, n) do {			\
-	const uint32_t *source = src;						\
-	uint32_t *destination = dest;						\
-	for (int i = 0; i < n; i++)							\
-		destination[i] = ((source[i] & 0xFF) << 24) |	\
-			((source[i] & 0xFF00) << 8) |				\
-			((source[i] & 0xFF0000) >> 8) |				\
-			((source[i] & 0xFF000000) >> 24);			\
-	} while (0)
+static inline void cichlid_change_endianness_32(uint32_t *dst, uint32_t *src, int n)
+{
+    for (int i = 0; i < n; ++i) {
+        dst[i] = (((src[i] & 0x000000FF) << 24) |
+                  ((src[i] & 0x0000FF00) << 8) |
+                  ((src[i] & 0x00FF0000) >> 8) |
+                  ((src[i] & 0xFF000000) >> 24));
+    }
+}
 
-#define CHANGE_ENDIANNESS_64(dest, src, n) do {			\
-	const uint64_t *source = src;						\
-	uint64_t *destination = dest;						\
-	for (int i = 0; i < n; i++)							\
-		destination[i] = ((source[i] & 0xFF) << 56) |	\
-			((source[i] & 0xFF00) << 40) |				\
-			((source[i] & 0xFF0000) << 24) |			\
-			((source[i] & 0xFF000000) << 8) |			\
-			((source[i] & 0xFF00000000) >> 8) |			\
-			((source[i] & 0xFF0000000000) >> 24) |		\
-			((source[i] & 0xFF000000000000) >> 40) |	\
-			((source[i] & 0xFF00000000000000) >> 56);	\
-	} while (0)
+static inline void cichlid_change_endianness_64(uint64_t *dst, uint64_t *src, int n)
+{
+    for (int i = 0; i < n; ++i) {
+        dst[i] = (((src[i] & 0x00000000000000FF) << 56) |
+                  ((src[i] & 0x000000000000FF00) << 40) |
+                  ((src[i] & 0x0000000000FF0000) << 24) |
+                  ((src[i] & 0x00000000FF000000) << 8) |
+                  ((src[i] & 0x000000FF00000000) >> 8) |
+                  ((src[i] & 0x0000FF0000000000) >> 24) |
+                  ((src[i] & 0x00FF000000000000) >> 40) |
+                  ((src[i] & 0xFF00000000000000) >> 56));
+    }
+}
 
-#define ROTATE_LEFT(x, y) (((x) << (y)) | ((x) >> (32-y)))
+static inline uint32_t cichlid_rotate_left_32(uint32_t x, int n)
+{
+    return (x << n) | (x >> (32 - n));
+}
 
-#define ROTATE_LEFT_64(x, y) (((x) << (y)) | ((x) >> (64-y)))
+static inline uint64_t cichlid_rotate_left_64(uint64_t x, int n)
+{
+   return  (x << n) | (x >> (64 - n));
+}
 
-#define ROTATE_RIGHT(x, y) (((x) >> (y)) | ((x) << (32-y)))
+static inline uint32_t cichlid_rotate_right_32(uint32_t x, int n)
+{
+    return (x >> n) | (x << (32 - n));
+}
 
-#define ROTATE_RIGHT_64(x, y) (((x) >> (y)) | ((x) << (64-y)))
+static inline uint64_t cichlid_rotate_right_64(uint64_t x, int n)
+{
+    return (x >> n) | (x << (64 - n));
+}
 
 #endif /* CICHLID_HASH_COMMON_H */

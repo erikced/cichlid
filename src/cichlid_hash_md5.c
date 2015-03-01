@@ -31,7 +31,7 @@
 static void cichlid_hash_md5_calc(CichlidHashMd5 *self, const char *buf, size_t bytes_read);
 static void cichlid_hash_md5_finalize(CichlidHashMd5 *self);
 
-static const uint32_t shift_lookup_table[64] = {
+static const int shift_lookup_table[64] = {
     0x07, 0x0C, 0x11, 0x16, 0x07, 0x0C, 0x11, 0x16,
     0x07, 0x0C, 0x11, 0x16, 0x07, 0x0C, 0x11, 0x16,
     0x05, 0x09, 0x0E, 0x14, 0x05, 0x09, 0x0E, 0x14,
@@ -107,7 +107,7 @@ char *cichlid_hash_md5_get_hash(CichlidHashMd5 *self)
     char *hash_string;
 
     cichlid_hash_md5_finalize(self);
-    CHANGE_ENDIANNESS(hash, self->h, 4);
+    cichlid_change_endianness_32(hash, self->h, 4);
     hash_string = malloc(sizeof(*hash_string) * 33);
     snprintf(hash_string, 33, "%.8x%.8x%.8x%.8x", hash[0], hash[1], hash[2], hash[3]);
     return hash_string;
@@ -145,7 +145,7 @@ static void cichlid_hash_md5_calc(CichlidHashMd5 *self, const char *buf, size_t 
             tmp = d;
             d = c;
             c = b;
-            b = b + ROTATE_LEFT(a + f + shift_angle_table[i] + w[g], shift_lookup_table[i]);
+            b = b + cichlid_rotate_left_32(a + f + shift_angle_table[i] + w[g], shift_lookup_table[i]);
             a = tmp;
         }
 
