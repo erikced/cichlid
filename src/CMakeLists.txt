@@ -12,6 +12,8 @@ add_library( libcichlid
     cichlid_hash_sha224.c
     cichlid_hash_sha256.h
     cichlid_hash_sha256.c
+    cichlid_hash_sha384.h
+    cichlid_hash_sha384.c
     cichlid_hash_sha512.h
     cichlid_hash_sha512.c
 )
