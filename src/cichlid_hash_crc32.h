@@ -27,12 +27,11 @@
 typedef struct _CichlidHashCrc32 CichlidHashCrc32;
 struct _CichlidHashCrc32
 {
-    bool hash_computed;
     uint32_t hash;
 };
 
 void cichlid_hash_crc32_init(CichlidHashCrc32 *self);
 void cichlid_hash_crc32_update(CichlidHashCrc32 *self, const char *data, size_t data_size);
-char *cichlid_hash_crc32_get_hash(CichlidHashCrc32 *self);
+char *cichlid_hash_crc32_get_hash(const CichlidHashCrc32 *self);
 
 #endif /* CICHLID_HASH_CRC32_H */

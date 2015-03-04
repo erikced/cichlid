@@ -64,16 +64,11 @@ static const uint32_t crc_lookup_table[256] = {
 void cichlid_hash_crc32_init(CichlidHashCrc32 *self)
 {
     self->hash = 0xFFFFFFFF;
-    self->hash_computed = false;
 }
 
 void cichlid_hash_crc32_update(CichlidHashCrc32 *self, const char *data, size_t data_size)
 {
     const char *cur_char;
-
-    if (self->hash_computed) {
-        cichlid_hash_crc32_init(self);
-    }
 
     if (!data_size) {
         return;
@@ -84,13 +79,9 @@ void cichlid_hash_crc32_update(CichlidHashCrc32 *self, const char *data, size_t 
     }
 }
 
-char *cichlid_hash_crc32_get_hash(CichlidHashCrc32 *self)
+char *cichlid_hash_crc32_get_hash(const CichlidHashCrc32 *self)
 {
     char *hash_string;
-
-    if (!self->hash_computed) {
-        self->hash_computed = true;
-    }
 
     hash_string = malloc(sizeof(char) * 9);
     sprintf(hash_string, "%.8x", ~(self->hash));
