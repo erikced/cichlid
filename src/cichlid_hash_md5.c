@@ -28,8 +28,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-static void cichlid_hash_md5_calc(CichlidHashMd5 *self, const char *buf, size_t bytes_read);
-static void cichlid_hash_md5_finalize(CichlidHashMd5 *self);
+static void calculate(uint32_t hash[4], const char *buf, size_t bytes_read);
+static void finalize(const CichlidHashMd5 *self, uint32_t hash[4]);
 
 static const int shift_lookup_table[64] = {
     0x07, 0x0C, 0x11, 0x16, 0x07, 0x0C, 0x11, 0x16,
@@ -61,17 +61,12 @@ void cichlid_hash_md5_init(CichlidHashMd5 *self)
     self->h[2] = 0x98BADCFE;
     self->h[3] = 0x10325476;
 
-    self->hash_computed = false;
     self->total_size = 0;
     self->data_left_size = 0;
 }
 
 void cichlid_hash_md5_update(CichlidHashMd5 *self, const char *data, size_t data_size)
 {
-    if (self->hash_computed) {
-        cichlid_hash_md5_init(self);
-    }
-
     if (!data_size) {
         return;
     }
@@ -83,7 +78,7 @@ void cichlid_hash_md5_update(CichlidHashMd5 *self, const char *data, size_t data
         self->data_left_size = data_size % 64;
         memcpy(self->data_left, data + data_size - self->data_left_size, self->data_left_size);
 
-        cichlid_hash_md5_calc(self, data, data_size - self->data_left_size);
+        calculate(self->h, data, data_size - self->data_left_size);
     } else if (data_size + self->data_left_size < 64) {
         /* If there is data left since the previous update but the total data size < 64 bytes */
         memcpy(self->data_left + self->data_left_size, data, data_size);
@@ -96,24 +91,24 @@ void cichlid_hash_md5_update(CichlidHashMd5 *self, const char *data, size_t data
         memcpy(buf + self->data_left_size, data, data_size - new_data_left_size);
         memcpy(self->data_left, data + data_size - new_data_left_size, new_data_left_size);
 
-        cichlid_hash_md5_calc(self, buf, data_size + self->data_left_size - new_data_left_size);
+        calculate(self->h, buf, data_size + self->data_left_size - new_data_left_size);
         self->data_left_size = (uint8_t)new_data_left_size;
     }
 }
 
-char *cichlid_hash_md5_get_hash(CichlidHashMd5 *self)
+char *cichlid_hash_md5_get_hash(const CichlidHashMd5 *self)
 {
     uint32_t hash[4];
     char *hash_string;
 
-    cichlid_hash_md5_finalize(self);
-    cichlid_change_endianness_32(hash, self->h, 4);
+    finalize(self, hash);
+    cichlid_change_endianness_32(hash, hash, 4);
     hash_string = malloc(sizeof(*hash_string) * 33);
     snprintf(hash_string, 33, "%.8x%.8x%.8x%.8x", hash[0], hash[1], hash[2], hash[3]);
     return hash_string;
 }
 
-static void cichlid_hash_md5_calc(CichlidHashMd5 *self, const char *buf, size_t bytes_read)
+static void calculate(uint32_t hash[4], const char *buf, size_t bytes_read)
 {
     uint32_t a, b, c, d, f, g, tmp, *w;
 
@@ -121,10 +116,10 @@ static void cichlid_hash_md5_calc(CichlidHashMd5 *self, const char *buf, size_t 
     for (int j = 0; j < bytes_read/64; j++) {
         w = (uint32_t*)(buf + j * 64);
         /* Initialize with the current values */
-        a = self->h[0];
-        b = self->h[1];
-        c = self->h[2];
-        d = self->h[3];
+        a = hash[0];
+        b = hash[1];
+        c = hash[2];
+        d = hash[3];
 
         /* Calculate */
         for (int i = 0; i < 64; i++) {
@@ -150,34 +145,33 @@ static void cichlid_hash_md5_calc(CichlidHashMd5 *self, const char *buf, size_t 
         }
 
         /* Add this chunk's result to the total result */
-        self->h[0] += a;
-        self->h[1] += b;
-        self->h[2] += c;
-        self->h[3] += d;
+        hash[0] += a;
+        hash[1] += b;
+        hash[2] += c;
+        hash[3] += d;
     }
 }
 
-static void cichlid_hash_md5_finalize(CichlidHashMd5 *self)
+static void finalize(const CichlidHashMd5 *self, uint32_t hash[4])
 {
-    char     buf[128];
+    char     buf[128] = {0,};
     size_t   size_offset;
+    uint64_t total_size;
 
-    memset(buf, 0, sizeof(buf));
-    if (!self->hash_computed) {
-        if (self->data_left_size < 56) {
-            size_offset = 56;
-        } else {
-            size_offset = 64 + 56;
-        }
+    memcpy(hash, self->h, sizeof(uint32_t) * 4);
 
-        /* Copy the data that is left, the ending 1 and the size to the buffer */
-        memcpy(buf, self->data_left, self->data_left_size);
-        buf[self->data_left_size] = -0x80; /* Signed char */
-        self->total_size = self->total_size * 8; /* Convert size to bits */
-        memcpy(buf + size_offset, &self->total_size, 8);
-
-        cichlid_hash_md5_calc(self, buf, size_offset + 8);
-        self->hash_computed = true;
+    if (self->data_left_size < 56) {
+        size_offset = 56;
+    } else {
+        size_offset = 64 + 56;
     }
+
+    /* Copy the data that is left, the ending 1 and the size to the buffer */
+    memcpy(buf, self->data_left, self->data_left_size);
+    buf[self->data_left_size] = -0x80; /* Signed char */
+    total_size = self->total_size * 8; /* Convert size to bits */
+    memcpy(buf + size_offset, &total_size, 8);
+
+    calculate(hash, buf, size_offset + 8);
 }
 

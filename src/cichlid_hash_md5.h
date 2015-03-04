@@ -34,11 +34,10 @@ struct _CichlidHashMd5
   uint8_t  data_left[63];
   uint8_t  data_left_size;
   uint64_t total_size;
-  bool     hash_computed;
 };
 
 void cichlid_hash_md5_init(CichlidHashMd5 *self);
 void cichlid_hash_md5_update(CichlidHashMd5 *self, const char *data, size_t data_size);
-char *cichlid_hash_md5_get_hash(CichlidHashMd5 *self);
+char *cichlid_hash_md5_get_hash(const CichlidHashMd5 *self);
 
 #endif /* CICHLID_HASH_MD5_H */
