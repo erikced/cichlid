@@ -37,14 +37,12 @@ struct CichlidHashSha2_32_
     uint8_t  data_left[63];
     uint8_t  data_left_size;
     uint32_t h[CICHLID_HASH_SHA2_32_N_WORDS];
-    uint32_t h0[CICHLID_HASH_SHA2_32_N_WORDS];
-    bool hash_computed;
     uint32_t hash_size;
     uint64_t total_size;
 };
 
 void cichlid_hash_sha2_32_init(CichlidHashSha2_32 *self, const uint32_t *h0, uint32_t hash_length);
 void cichlid_hash_sha2_32_update(CichlidHashSha2_32 *self, const char *data, size_t data_size);
-char *cichlid_hash_sha2_32_get_hash(CichlidHashSha2_32 *self);
+char *cichlid_hash_sha2_32_get_hash(const CichlidHashSha2_32 *self);
 
 #endif /* CICHLID_HASH_SHA2_32_H */

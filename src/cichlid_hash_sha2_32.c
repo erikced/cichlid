@@ -27,8 +27,17 @@
 #include <stdlib.h>
 #include <string.h>
 
-static void            cichlid_hash_sha2_32_calc(CichlidHashSha2_32 *self, const char *buf, size_t bytes_read);
-static void            cichlid_hash_sha2_32_final(CichlidHashSha2_32 *self);
+/*!
+ * \param[in,out] hash Current hash state, is updated by the function.
+ * \param         data New date to process.
+ * \param         bytes_read Number of bytes in data.
+ */
+static void            calculate(uint32_t hash[8], const char *data, size_t bytes_read);
+/*!
+ * \param self State struct.
+ * \param hash Buffer where the finalized hash is be stored.
+ */
+static void            finalize(const CichlidHashSha2_32 *self, uint32_t hash[8]);
 static inline uint32_t Ch(uint32_t x, uint32_t y, uint32_t z);
 static inline uint32_t Maj(uint32_t x, uint32_t y, uint32_t z);
 static inline uint32_t Sigma0(uint32_t x);
@@ -49,7 +58,6 @@ static const uint32_t k[64] = {
 
 void cichlid_hash_sha2_32_init(CichlidHashSha2_32 *self, const uint32_t *h0, uint32_t hash_length)
 {
-    self->hash_computed = false; /* To force reinit */
     self->total_size = 0;
     self->data_left_size = 0;
     self->hash_size = hash_length;
@@ -58,98 +66,15 @@ void cichlid_hash_sha2_32_init(CichlidHashSha2_32 *self, const uint32_t *h0, uin
     }
 }
 
-/**
- * Calculates the partial checksum for buf
- * @param buf data buffer
- * @param bytes_read size of data buffer
- */
-static void cichlid_hash_sha2_32_calc(CichlidHashSha2_32 *self, const char *data, size_t bytes_read)
-{
-    uint32_t a, b, c, d, e, f, g, h, t1, t2;
-    uint32_t w[64];
-
-    /* Process data in 512-bit chunks */
-    for (int j = 0; j < bytes_read/64; j++) {
-        cichlid_change_endianness_32(w, (uint32_t *)&data[j * 64], 16);
-
-        /* Extend w to contain 64 uint32_t */
-        for (int i = 16; i < 64; i++) {
-            w[i] = w[i-16] + sigma0(w[i-15]) + w[i-7] + sigma1(w[i-2]);
-        }
-
-        /* Initialize with the current values */
-        a = self->h[0];
-        b = self->h[1];
-        c = self->h[2];
-        d = self->h[3];
-        e = self->h[4];
-        f = self->h[5];
-        g = self->h[6];
-        h = self->h[7];
-
-        /* Calculate */
-        for (int i = 0; i < 64; i++) {
-            t1 = h + Sigma1(e) + Ch(e, f, g) + k[i] + w[i];
-            t2 = Sigma0(a) + Maj(a, b, c);
-
-            h = g;
-            g = f;
-            f = e;
-            e = d + t1;
-            d = c;
-            c = b;
-            b = a;
-            a = t1 + t2;
-        }
-
-        /* Add this chunks result to the total result */
-        self->h[0] += a;
-        self->h[1] += b;
-        self->h[2] += c;
-        self->h[3] += d;
-        self->h[4] += e;
-        self->h[5] += f;
-        self->h[6] += g;
-        self->h[7] += h;
-    }
-}
-
-static void cichlid_hash_sha2_32_final(CichlidHashSha2_32 *self)
-{
-    char      buf[sizeof(char) * 64 * 2] = { 0,};
-    size_t    size_offset;
-    char     *total_size_p;
-
-    if (!self->hash_computed) {
-        if (self->data_left_size < 56) {
-            size_offset = 56;
-        } else {
-            size_offset = 64 + 56;
-        }
-
-        /* Copy the data that is left, the ending 1 and the size to the buffer */
-        memcpy(buf, self->data_left, self->data_left_size);
-        buf[self->data_left_size] = -0x80;       /* Signed char          */
-        self->total_size = self->total_size * 8; /* Convert size to bits */
-
-        total_size_p = (char *)&self->total_size;
-        cichlid_change_endianness_32((uint32_t *)&buf[size_offset], (uint32_t *)(total_size_p + 4), 1);
-        cichlid_change_endianness_32((uint32_t *)&buf[size_offset + 4], (uint32_t *)(total_size_p), 1);
-        cichlid_hash_sha2_32_calc(self, buf, size_offset + 8);
-
-        self->hash_computed = true;
-    }
-}
-
-char *cichlid_hash_sha2_32_get_hash(CichlidHashSha2_32 *self)
+char *cichlid_hash_sha2_32_get_hash(const CichlidHashSha2_32 *self)
 {
     char     *hash_string;
+    uint32_t  hash[8];
 
-    cichlid_hash_sha2_32_final(self);
-
-    hash_string = malloc(sizeof(char) * (self->hash_size + 1));
+    finalize(self, hash);
+    hash_string = malloc(sizeof(*hash_string) * (self->hash_size + 1));
     for (int i = 0; i < self->hash_size / 8; ++i) {
-        sprintf(hash_string + 8 * i, "%.8x", self->h[i]);
+        sprintf(hash_string + 8 * i, "%.8x", hash[i]);
     }
 
     return hash_string;
@@ -170,7 +95,7 @@ void cichlid_hash_sha2_32_update(CichlidHashSha2_32 *self, const char *data, siz
         self->data_left_size = data_size % 64;
         memcpy(self->data_left, data + data_size - self->data_left_size, self->data_left_size);
 
-        cichlid_hash_sha2_32_calc(self, data, data_size - self->data_left_size);
+        calculate(self->h, data, data_size - self->data_left_size);
     } else if (data_size + self->data_left_size < 64) {
         /* If there is data left since the previous update but the total data size < 64 bytes */
         memcpy(self->data_left + self->data_left_size, data, data_size);
@@ -183,11 +108,89 @@ void cichlid_hash_sha2_32_update(CichlidHashSha2_32 *self, const char *data, siz
         memcpy(buf + self->data_left_size, data, data_size - new_data_left_size);
         memcpy(self->data_left, data + data_size - new_data_left_size, new_data_left_size);
 
-        cichlid_hash_sha2_32_calc(self, buf, data_size + self->data_left_size - new_data_left_size);
+        calculate(self->h, buf, data_size + self->data_left_size - new_data_left_size);
         self->data_left_size = new_data_left_size;
 
         free(buf);
     }
+}
+
+static void calculate(uint32_t *hash, const char *data, size_t bytes_read)
+{
+    uint32_t a, b, c, d, e, f, g, h, t1, t2;
+    uint32_t w[64];
+
+    /* Process data in 512-bit chunks */
+    for (int j = 0; j < bytes_read/64; j++) {
+        cichlid_change_endianness_32(w, (uint32_t *)&data[j * 64], 16);
+
+        /* Extend w to contain 64 uint32_t */
+        for (int i = 16; i < 64; i++) {
+            w[i] = w[i-16] + sigma0(w[i-15]) + w[i-7] + sigma1(w[i-2]);
+        }
+
+        /* Initialize with the current values */
+        a = hash[0];
+        b = hash[1];
+        c = hash[2];
+        d = hash[3];
+        e = hash[4];
+        f = hash[5];
+        g = hash[6];
+        h = hash[7];
+
+        /* Calculate */
+        for (int i = 0; i < 64; i++) {
+            t1 = h + Sigma1(e) + Ch(e, f, g) + k[i] + w[i];
+            t2 = Sigma0(a) + Maj(a, b, c);
+
+            h = g;
+            g = f;
+            f = e;
+            e = d + t1;
+            d = c;
+            c = b;
+            b = a;
+            a = t1 + t2;
+        }
+
+        /* Add this chunks result to the total result */
+        hash[0] += a;
+        hash[1] += b;
+        hash[2] += c;
+        hash[3] += d;
+        hash[4] += e;
+        hash[5] += f;
+        hash[6] += g;
+        hash[7] += h;
+    }
+}
+
+static void finalize(const CichlidHashSha2_32 *self, uint32_t hash[8])
+{
+    char      buf[sizeof(char) * 64 * 2] = { 0,};
+    size_t    size_offset;
+    char     *total_size_p;
+    uint64_t  total_size;
+
+    /* Populate hash with the current state */
+    memcpy(hash, self->h, sizeof(*hash) * 8);
+
+    if (self->data_left_size < 56) {
+        size_offset = 56;
+    } else {
+        size_offset = 64 + 56;
+    }
+
+    /* Copy the data that is left, the ending 1 and the size to the buffer */
+    memcpy(buf, self->data_left, self->data_left_size);
+    buf[self->data_left_size] = -0x80;       /* Signed char          */
+    total_size = self->total_size * 8; /* Convert size to bits */
+
+    total_size_p = (char *)&total_size;
+    cichlid_change_endianness_32((uint32_t *)&buf[size_offset], (uint32_t *)(total_size_p + 4), 1);
+    cichlid_change_endianness_32((uint32_t *)&buf[size_offset + 4], (uint32_t *)(total_size_p), 1);
+    calculate(hash, buf, size_offset + 8);
 }
 
 /**
